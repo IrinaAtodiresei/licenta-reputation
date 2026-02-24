@@ -2,7 +2,7 @@ praw==7.7.1
 requests==2.32.3
 python-dotenv==1.0.1
 vaderSentiment==3.3.2
-psycopg2-binary==2.9.9
+psycopg[binary]==3.2.6
 joblib==1.4.2
 scikit-learn==1.5.1
 pandas==2.2.2
