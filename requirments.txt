@@ -1,0 +1,9 @@
+streamlit
+pandas
+psycopg[binary]
+python-dotenv
+requests
+joblib
+vaderSentiment
+scikit-learn
+numpy

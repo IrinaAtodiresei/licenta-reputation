@@ -2,7 +2,8 @@ import os
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
-
+import json
+from pathlib import Path
 import psycopg
 
 
@@ -10,9 +11,15 @@ load_dotenv()
 
 PG_DSN = os.getenv("PG_DSN")
 if not PG_DSN:
-    raise RuntimeError("PG_DSN lipsește din .env")
+    st.error("PG_DSN lipsește. Setează-l în Streamlit Cloud → Settings → Secrets.")
+    st.stop()
 
 st.set_page_config(page_title="Reputation Dashboard", layout="wide")
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+EVAL_DIR = BASE_DIR / "evaluation"
+CM_PATH = EVAL_DIR / "confusion_matrix.csv"
+METRICS_PATH = EVAL_DIR / "metrics.json"
 
 
 def get_conn():
@@ -179,3 +186,36 @@ if not disagreements.empty:
 
 st.dataframe(disagreements, use_container_width=True)
 st.caption("Tip: folosește filtrele din stânga + butonul Refresh.")
+
+st.markdown("---")
+st.subheader("Model evaluation")
+
+if CM_PATH.exists() and METRICS_PATH.exists():
+    # citire metrics
+    with open(METRICS_PATH, "r", encoding="utf-8") as f:
+        metrics = json.load(f)
+
+    # citire confusion matrix
+    cm_df = pd.read_csv(CM_PATH, index_col=0)
+
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Accuracy", f"{metrics['accuracy']:.4f}")
+    c2.metric("Precision", f"{metrics['precision']:.4f}")
+    c3.metric("Recall", f"{metrics['recall']:.4f}")
+    c4.metric("F1-score", f"{metrics['f1']:.4f}")
+
+    st.markdown("### Confusion matrix")
+    st.dataframe(cm_df, use_container_width=True)
+
+    st.markdown("### Confusion matrix chart")
+    st.bar_chart(cm_df)
+
+    st.markdown("### Detailed counts")
+    d1, d2, d3, d4 = st.columns(4)
+    d1.metric("True Positive", f"{metrics['true_positive']}")
+    d2.metric("True Negative", f"{metrics['true_negative']}")
+    d3.metric("False Positive", f"{metrics['false_positive']}")
+    d4.metric("False Negative", f"{metrics['false_negative']}")
+
+else:
+    st.info("Nu există încă fișierele de evaluare. Rulează scripts/evaluate_model.py.")

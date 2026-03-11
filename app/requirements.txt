@@ -2,12 +2,4 @@ streamlit==1.54.0
 pandas==2.3.3
 plotly==6.0.0
 python-dotenv==1.0.1
-
-# DB driver compatibil cu Streamlit Cloud (NU psycopg2-binary!)
 psycopg[binary]==3.2.6
-
-# pentru connector_reddit.py
-requests==2.32.3
-joblib==1.4.2
-scikit-learn==1.5.1
-vaderSentiment==3.3.2
