@@ -1,9 +1,9 @@
 streamlit
 pandas
-psycopg[binary]
+plotly
 python-dotenv
+psycopg[binary]
 requests
 joblib
-vaderSentiment
 scikit-learn
-numpy
+vaderSentiment
