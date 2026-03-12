@@ -4,13 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5e144aed-1f1e-4264-bf5c-2969611e1c6d" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/scripts/evaluate_model.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/scripts/prepare_data.py" afterDir="false" />
+    <list default="true" id="5e144aed-1f1e-4264-bf5c-2969611e1c6d" name="Changes" comment="Fix requirements for Streamlit Cloud">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/dashboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirments.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirments.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,6 +28,18 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;IrinaAtodiresei&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/IrinaAtodiresei/licenta-reputation.git&quot;,
+    &quot;accountId&quot;: &quot;663a1ec5-e806-409f-98c2-e2a6f3db4bd8&quot;
+  }
+}</component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5
 }</component>
@@ -41,21 +49,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python.connector_reddit.executor": "Run",
-    "Python.dashboard.executor": "Run",
-    "Python.evaluate_model.executor": "Run",
-    "Python.prepare_data.executor": "Run",
-    "Python.test_db.executor": "Run",
-    "Python.test_model.executor": "Run",
-    "Python.train_sentiment140.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "feature/model-evaluation",
-    "settings.editor.selected.configurable": "preferences.lookFeel"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python.connector_reddit.executor&quot;: &quot;Run&quot;,
+    &quot;Python.dashboard.executor&quot;: &quot;Run&quot;,
+    &quot;Python.evaluate_model.executor&quot;: &quot;Run&quot;,
+    &quot;Python.prepare_data.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_db.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_model.executor&quot;: &quot;Run&quot;,
+    &quot;Python.train_sentiment140.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feature/model-evaluation&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Irina\Anul3\SEM2\LICENTA\models" />
@@ -198,6 +206,31 @@
       <option name="presentableId" value="Default" />
       <updated>1771878683933</updated>
     </task>
+    <task id="LOCAL-00001" summary="Add model evaluation and confusion matrix to Streamlit dashboard">
+      <option name="closed" value="true" />
+      <created>1773268364027</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1773268364027</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Fix requirements for Streamlit Cloud">
+      <option name="closed" value="true" />
+      <created>1773268740025</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1773268740025</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Fix requirements for Streamlit Cloud">
+      <option name="closed" value="true" />
+      <created>1773268866426</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1773268866426</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -210,5 +243,10 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Add model evaluation and confusion matrix to Streamlit dashboard" />
+    <MESSAGE value="Fix requirements for Streamlit Cloud" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix requirements for Streamlit Cloud" />
   </component>
 </project>

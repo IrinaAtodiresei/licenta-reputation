@@ -1,9 +1,10 @@
 import os
+import json
+from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
-import json
-from pathlib import Path
 import psycopg
 
 
@@ -23,12 +24,10 @@ METRICS_PATH = EVAL_DIR / "metrics.json"
 
 
 def get_conn():
-    # psycopg3 connection
     return psycopg.connect(PG_DSN)
 
 
 def read_df(sql: str, params=None) -> pd.DataFrame:
-    # pandas poate folosi conexiunea DB-API; psycopg3 e ok
     with get_conn() as conn:
         return pd.read_sql_query(sql, conn, params=params)
 
@@ -90,11 +89,17 @@ summary = st.session_state.summary.copy()
 disagree_company = st.session_state.disagree_company.copy()
 disagreements = st.session_state.disagreements.copy()
 
-# filter company
+# -----------------------------
+# Filter company
+# -----------------------------
 if company != "All":
     summary = summary[summary["company_name"] == company]
     disagree_company = disagree_company[disagree_company["company_name"] == company]
     disagreements = disagreements[disagreements["company_name"] == company]
+
+# dacă user-ul debifează disagreements
+if not only_disagreements:
+    disagreements = disagreements.copy()
 
 # -----------------------------
 # Header
@@ -109,8 +114,6 @@ col1, col2, col3, col4 = st.columns(4)
 
 total_mentions = int(summary["mentions"].sum()) if not summary.empty else 0
 avg_score = float(summary["avg_score"].mean()) if not summary.empty else 0.0
-
-# in view: "pct_negative" (din pozele tale)
 pct_neg = float(summary["pct_negative"].mean()) if not summary.empty else 0.0
 pct_diff = float(disagree_company["pct_different"].mean()) if not disagree_company.empty else 0.0
 
@@ -126,20 +129,24 @@ st.markdown("---")
 # -----------------------------
 st.subheader("Company summary (selected method)")
 
-cols_order = ["company_id", "company_name", "method", "mentions", "avg_score",
-             "positives", "negatives", "neutrals", "pct_negative"]
+cols_order = [
+    "company_id", "company_name", "method", "mentions", "avg_score",
+    "positives", "negatives", "neutrals", "pct_negative"
+]
 
-# dacă view-ul tău are exact coloanele astea, perfect
-summary = summary[cols_order].sort_values("mentions", ascending=False)
-st.dataframe(summary, use_container_width=True)
+if not summary.empty:
+    summary = summary[cols_order].sort_values("mentions", ascending=False)
+    st.dataframe(summary, use_container_width=True)
 
-csv_bytes = summary.to_csv(index=False).encode("utf-8")
-st.download_button(
-    label="⬇ Download summary CSV",
-    data=csv_bytes,
-    file_name=f"summary_{method}.csv",
-    mime="text/csv",
-)
+    csv_bytes = summary.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="⬇ Download summary CSV",
+        data=csv_bytes,
+        file_name=f"summary_{method}.csv",
+        mime="text/csv",
+    )
+else:
+    st.info("Nu există date pentru filtrul selectat.")
 
 # -----------------------------
 # Charts
@@ -168,8 +175,11 @@ st.markdown("---")
 # Disagreement summary
 # -----------------------------
 st.subheader("LR vs VADER disagreement (by company)")
-disagree_company = disagree_company.sort_values("pct_different", ascending=False)
-st.dataframe(disagree_company, use_container_width=True)
+if not disagree_company.empty:
+    disagree_company = disagree_company.sort_values("pct_different", ascending=False)
+    st.dataframe(disagree_company, use_container_width=True)
+else:
+    st.info("Nu există date despre disagreement pentru filtrul selectat.")
 
 # -----------------------------
 # Disagreements list
@@ -183,39 +193,43 @@ keep_cols = [
 
 if not disagreements.empty:
     disagreements = disagreements[keep_cols].sort_values("published_at", ascending=False).head(limit_rows)
+    st.dataframe(disagreements, use_container_width=True)
+else:
+    st.info("Nu există postări în care LR și VADER să difere pentru filtrul selectat.")
 
-st.dataframe(disagreements, use_container_width=True)
 st.caption("Tip: folosește filtrele din stânga + butonul Refresh.")
 
-st.markdown("---")
-st.subheader("Model evaluation")
+# -----------------------------
+# Model evaluation
+# Afișăm doar pentru Logistic Regression
+# -----------------------------
+if method == "lr_sent140_tfidf":
+    st.markdown("---")
+    st.subheader("Model evaluation")
 
-if CM_PATH.exists() and METRICS_PATH.exists():
-    # citire metrics
-    with open(METRICS_PATH, "r", encoding="utf-8") as f:
-        metrics = json.load(f)
+    if CM_PATH.exists() and METRICS_PATH.exists():
+        with open(METRICS_PATH, "r", encoding="utf-8") as f:
+            metrics = json.load(f)
 
-    # citire confusion matrix
-    cm_df = pd.read_csv(CM_PATH, index_col=0)
+        cm_df = pd.read_csv(CM_PATH, index_col=0)
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Accuracy", f"{metrics['accuracy']:.4f}")
-    c2.metric("Precision", f"{metrics['precision']:.4f}")
-    c3.metric("Recall", f"{metrics['recall']:.4f}")
-    c4.metric("F1-score", f"{metrics['f1']:.4f}")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Accuracy", f"{metrics['accuracy']:.4f}")
+        m2.metric("Precision", f"{metrics['precision']:.4f}")
+        m3.metric("Recall", f"{metrics['recall']:.4f}")
+        m4.metric("F1-score", f"{metrics['f1']:.4f}")
 
-    st.markdown("### Confusion matrix")
-    st.dataframe(cm_df, use_container_width=True)
+        st.markdown("### Confusion matrix")
+        st.dataframe(cm_df, use_container_width=True)
 
-    st.markdown("### Confusion matrix chart")
-    st.bar_chart(cm_df)
+        st.markdown("### Confusion matrix chart")
+        st.bar_chart(cm_df)
 
-    st.markdown("### Detailed counts")
-    d1, d2, d3, d4 = st.columns(4)
-    d1.metric("True Positive", f"{metrics['true_positive']}")
-    d2.metric("True Negative", f"{metrics['true_negative']}")
-    d3.metric("False Positive", f"{metrics['false_positive']}")
-    d4.metric("False Negative", f"{metrics['false_negative']}")
-
-else:
-    st.info("Nu există încă fișierele de evaluare. Rulează scripts/evaluate_model.py.")
+        st.markdown("### Detailed counts")
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric("True Positive", f"{metrics['true_positive']}")
+        d2.metric("True Negative", f"{metrics['true_negative']}")
+        d3.metric("False Positive", f"{metrics['false_positive']}")
+        d4.metric("False Negative", f"{metrics['false_negative']}")
+    else:
+        st.info("Nu există încă fișierele de evaluare. Rulează scripts/evaluate_model.py.")
