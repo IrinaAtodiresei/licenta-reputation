@@ -6,6 +6,7 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 import psycopg
+import matplotlib.pyplot as plt
 
 load_dotenv()
 
@@ -30,6 +31,10 @@ def get_conn():
 def read_df(sql: str, params=None) -> pd.DataFrame:
     with get_conn() as conn:
         return pd.read_sql_query(sql, conn, params=params)
+
+
+def format_thousands_dot(value):
+    return f"{int(value):,}".replace(",", ".")
 
 
 def generate_interpretation(company, method_name, total_mentions, avg_score, pct_negative, pct_disagreement):
@@ -83,7 +88,7 @@ def generate_interpretation(company, method_name, total_mentions, avg_score, pct
         )
 
     return (
-        f"Based on the selected filters, {total_mentions} mentions were analyzed {company_text} {method_text}. "
+        f"Based on the selected filters, {format_thousands_dot(total_mentions)} mentions were analyzed {company_text} {method_text}. "
         f"{sentiment_text} {negative_text} {disagreement_text}"
     )
 
@@ -113,13 +118,51 @@ def generate_confusion_matrix_interpretation(metrics):
 
     return (
         f"The Logistic Regression model was evaluated using the confusion matrix. "
-        f"It correctly classified {tp:,} positive messages (True Positive) and {tn:,} negative messages (True Negative). "
-        f"At the same time, it made classification errors: {fp:,} negative messages were incorrectly classified as positive "
-        f"(False Positive), and {fn:,} positive messages were incorrectly classified as negative (False Negative). "
-        f"Overall, the model correctly classified {correct:,} messages and misclassified {wrong:,} messages, "
-        f"out of a total of {total:,} evaluated messages. This corresponds to an accuracy of {accuracy:.3f}, "
-        f"which is approximately {accuracy * 100:.0f}% correct predictions."
+        f"It correctly classified {format_thousands_dot(tp)} positive messages (True Positive) and "
+        f"{format_thousands_dot(tn)} negative messages (True Negative). "
+        f"At the same time, it made classification errors: {format_thousands_dot(fp)} negative messages were "
+        f"incorrectly classified as positive (False Positive), and {format_thousands_dot(fn)} positive messages "
+        f"were incorrectly classified as negative (False Negative). "
+        f"Overall, the model correctly classified {format_thousands_dot(correct)} messages and misclassified "
+        f"{format_thousands_dot(wrong)} messages, out of a total of {format_thousands_dot(total)} evaluated messages. "
+        f"This corresponds to an accuracy of {accuracy:.3f}, which is approximately {accuracy * 100:.0f}% correct predictions."
     )
+
+
+def plot_confusion_matrix_heatmap(cm_df: pd.DataFrame):
+    fig, ax = plt.subplots(figsize=(7, 4.8))
+
+    im = ax.imshow(cm_df.values, cmap="Blues")
+
+    ax.set_xticks(range(len(cm_df.columns)))
+    ax.set_yticks(range(len(cm_df.index)))
+    ax.set_xticklabels(cm_df.columns)
+    ax.set_yticklabels(cm_df.index)
+
+    ax.set_xlabel("Predicted label")
+    ax.set_ylabel("Actual label")
+    ax.set_title("Confusion Matrix")
+
+    threshold = cm_df.values.max() / 2 if cm_df.values.size > 0 else 0
+
+    for i in range(cm_df.shape[0]):
+        for j in range(cm_df.shape[1]):
+            value = int(cm_df.iloc[i, j])
+            text_color = "white" if value > threshold else "black"
+            ax.text(
+                j,
+                i,
+                format_thousands_dot(value),
+                ha="center",
+                va="center",
+                color=text_color,
+                fontsize=12,
+                fontweight="bold",
+            )
+
+    fig.colorbar(im, ax=ax)
+    plt.tight_layout()
+    return fig
 
 
 METHODS = {
@@ -236,20 +279,17 @@ col1, col2, col3, col4 = st.columns(4)
 
 total_mentions = int(summary["mentions"].sum()) if not summary.empty else 0
 
-# weighted/global average score
 if not summary.empty and total_mentions > 0:
     avg_score = float((summary["avg_score"] * summary["mentions"]).sum() / total_mentions)
 else:
     avg_score = 0.0
 
-# global negative percentage
 if not summary.empty and total_mentions > 0 and "negatives" in summary.columns:
     total_negatives = int(summary["negatives"].sum())
     pct_neg = float((total_negatives / total_mentions) * 100)
 else:
     pct_neg = 0.0
 
-# global disagreement percentage
 if not disagree_company.empty:
     if "different_count" in disagree_company.columns and "total_posts" in disagree_company.columns:
         total_different = disagree_company["different_count"].sum()
@@ -260,15 +300,15 @@ if not disagree_company.empty:
         total_posts = disagree_company["total_mentions"].sum()
         pct_diff = float((total_different / total_posts) * 100) if total_posts > 0 else 0.0
     else:
-        # fallback only if raw counts are not available in the view
         pct_diff = float(disagree_company["pct_different"].mean()) if "pct_different" in disagree_company.columns else 0.0
 else:
     pct_diff = 0.0
 
-col1.metric("Total mentions (filtered)", f"{total_mentions}")
+col1.metric("Total mentions (filtered)", format_thousands_dot(total_mentions))
 col2.metric("Avg score", f"{avg_score:.4f}")
 col3.metric("% Negative", f"{pct_neg:.2f}%")
 col4.metric("% Disagreement LR vs VADER", f"{pct_diff:.2f}%")
+
 st.markdown("---")
 
 # -----------------------------
@@ -370,16 +410,22 @@ elif method == "lr_sent140_tfidf":
     st.markdown("### Logistic Regression validation")
 
     if base_metrics is not None:
-        c1, c2, c3, c4 = st.columns(4)
+        c1, c2, c3, c4, c5 = st.columns(5)
         c1.metric("Accuracy", f"{base_metrics['accuracy']:.4f}")
         c2.metric("Precision", f"{base_metrics['precision']:.4f}")
         c3.metric("Recall", f"{base_metrics['recall']:.4f}")
         c4.metric("F1-score", f"{base_metrics['f1']:.4f}")
+        c5.metric("ROC AUC", f"{base_metrics['roc_auc']:.4f}")
 
         if CM_PATH.exists():
             cm_df = pd.read_csv(CM_PATH, index_col=0)
+
+            cm_df.index = ["Actual Negative", "Actual Positive"]
+            cm_df.columns = ["Predicted Negative", "Predicted Positive"]
+
             st.markdown("### Confusion matrix")
-            st.dataframe(cm_df, use_container_width=True)
+            fig = plot_confusion_matrix_heatmap(cm_df)
+            st.pyplot(fig)
 
         st.markdown("### Interpretation (confusion matrix)")
         st.info(generate_confusion_matrix_interpretation(base_metrics))
