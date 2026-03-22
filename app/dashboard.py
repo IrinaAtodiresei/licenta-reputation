@@ -235,15 +235,40 @@ st.subheader(f"Method: {method_name}")
 col1, col2, col3, col4 = st.columns(4)
 
 total_mentions = int(summary["mentions"].sum()) if not summary.empty else 0
-avg_score = float(summary["avg_score"].mean()) if not summary.empty else 0.0
-pct_neg = float(summary["pct_negative"].mean()) if not summary.empty else 0.0
-pct_diff = float(disagree_company["pct_different"].mean()) if not disagree_company.empty else 0.0
+
+# weighted/global average score
+if not summary.empty and total_mentions > 0:
+    avg_score = float((summary["avg_score"] * summary["mentions"]).sum() / total_mentions)
+else:
+    avg_score = 0.0
+
+# global negative percentage
+if not summary.empty and total_mentions > 0 and "negatives" in summary.columns:
+    total_negatives = int(summary["negatives"].sum())
+    pct_neg = float((total_negatives / total_mentions) * 100)
+else:
+    pct_neg = 0.0
+
+# global disagreement percentage
+if not disagree_company.empty:
+    if "different_count" in disagree_company.columns and "total_posts" in disagree_company.columns:
+        total_different = disagree_company["different_count"].sum()
+        total_posts = disagree_company["total_posts"].sum()
+        pct_diff = float((total_different / total_posts) * 100) if total_posts > 0 else 0.0
+    elif "different_mentions" in disagree_company.columns and "total_mentions" in disagree_company.columns:
+        total_different = disagree_company["different_mentions"].sum()
+        total_posts = disagree_company["total_mentions"].sum()
+        pct_diff = float((total_different / total_posts) * 100) if total_posts > 0 else 0.0
+    else:
+        # fallback only if raw counts are not available in the view
+        pct_diff = float(disagree_company["pct_different"].mean()) if "pct_different" in disagree_company.columns else 0.0
+else:
+    pct_diff = 0.0
 
 col1.metric("Total mentions (filtered)", f"{total_mentions}")
 col2.metric("Avg score", f"{avg_score:.4f}")
-col3.metric("% Negative (avg)", f"{pct_neg:.2f}%")
+col3.metric("% Negative", f"{pct_neg:.2f}%")
 col4.metric("% Disagreement LR vs VADER", f"{pct_diff:.2f}%")
-
 st.markdown("---")
 
 # -----------------------------
