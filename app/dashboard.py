@@ -131,6 +131,7 @@ def generate_tuned_model_interpretation(metrics, best_params):
     acc = metrics.get("accuracy", 0.0)
     precision = metrics.get("precision", 0.0)
     recall = metrics.get("recall", 0.0)
+    roc_auc = metrics.get("roc_auc", None)
 
     if f1 >= 0.80:
         performance_text = (
@@ -166,6 +167,9 @@ def generate_tuned_model_interpretation(metrics, best_params):
         f"Recall = {recall:.4f}, and F1-score = {f1:.4f}. "
     )
 
+    if roc_auc is not None:
+        metrics_text += f"The ROC AUC is {roc_auc:.4f}, which reflects the model's general ability to separate the two classes. "
+
     return performance_text + " " + metrics_text + config_text + explanation_text
 
 
@@ -177,6 +181,9 @@ def generate_comparison_text(base_metrics, tuned_metrics):
 
     delta_f1 = tuned_f1 - base_f1
     delta_acc = tuned_acc - base_acc
+
+    base_roc_auc = base_metrics.get("roc_auc", None)
+    tuned_roc_auc = tuned_metrics.get("roc_auc", None)
 
     if delta_f1 > 0:
         improvement_text = (
@@ -191,6 +198,11 @@ def generate_comparison_text(base_metrics, tuned_metrics):
             f"The tuned model keeps the F1-score at a similar level, while the accuracy changes by {delta_acc:.4f}."
         )
 
+    roc_text = ""
+    if base_roc_auc is not None and tuned_roc_auc is not None:
+        delta_roc_auc = tuned_roc_auc - base_roc_auc
+        roc_text = f" The ROC AUC changes by {delta_roc_auc:.4f}."
+
     if tuned_f1 >= base_f1:
         conclusion_text = (
             "Overall, hyperparameter tuning had a positive or neutral effect on model performance."
@@ -200,7 +212,7 @@ def generate_comparison_text(base_metrics, tuned_metrics):
             "Overall, the initial configuration remains more effective than the tuned variant."
         )
 
-    return improvement_text + " " + conclusion_text
+    return improvement_text + roc_text + " " + conclusion_text
 
 
 METHODS = {
@@ -399,11 +411,19 @@ if method == "lr_sent140_tfidf":
     if base_metrics is not None:
         st.markdown("### Initial Logistic Regression model")
 
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("Accuracy", f"{base_metrics['accuracy']:.4f}")
-        c2.metric("Precision", f"{base_metrics['precision']:.4f}")
-        c3.metric("Recall", f"{base_metrics['recall']:.4f}")
-        c4.metric("F1-score", f"{base_metrics['f1']:.4f}")
+        if "roc_auc" in base_metrics:
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c1.metric("Accuracy", f"{base_metrics['accuracy']:.4f}")
+            c2.metric("Precision", f"{base_metrics['precision']:.4f}")
+            c3.metric("Recall", f"{base_metrics['recall']:.4f}")
+            c4.metric("F1-score", f"{base_metrics['f1']:.4f}")
+            c5.metric("ROC AUC", f"{base_metrics['roc_auc']:.4f}")
+        else:
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Accuracy", f"{base_metrics['accuracy']:.4f}")
+            c2.metric("Precision", f"{base_metrics['precision']:.4f}")
+            c3.metric("Recall", f"{base_metrics['recall']:.4f}")
+            c4.metric("F1-score", f"{base_metrics['f1']:.4f}")
 
         if CM_PATH.exists():
             cm_df = pd.read_csv(CM_PATH, index_col=0)
@@ -421,11 +441,19 @@ if method == "lr_sent140_tfidf":
     if tuned_metrics is not None:
         st.markdown("### Tuned Logistic Regression model")
 
-        t1, t2, t3, t4 = st.columns(4)
-        t1.metric("Accuracy", f"{tuned_metrics['accuracy']:.4f}")
-        t2.metric("Precision", f"{tuned_metrics['precision']:.4f}")
-        t3.metric("Recall", f"{tuned_metrics['recall']:.4f}")
-        t4.metric("F1-score", f"{tuned_metrics['f1']:.4f}")
+        if "roc_auc" in tuned_metrics:
+            t1, t2, t3, t4, t5 = st.columns(5)
+            t1.metric("Accuracy", f"{tuned_metrics['accuracy']:.4f}")
+            t2.metric("Precision", f"{tuned_metrics['precision']:.4f}")
+            t3.metric("Recall", f"{tuned_metrics['recall']:.4f}")
+            t4.metric("F1-score", f"{tuned_metrics['f1']:.4f}")
+            t5.metric("ROC AUC", f"{tuned_metrics['roc_auc']:.4f}")
+        else:
+            t1, t2, t3, t4 = st.columns(4)
+            t1.metric("Accuracy", f"{tuned_metrics['accuracy']:.4f}")
+            t2.metric("Precision", f"{tuned_metrics['precision']:.4f}")
+            t3.metric("Recall", f"{tuned_metrics['recall']:.4f}")
+            t4.metric("F1-score", f"{tuned_metrics['f1']:.4f}")
 
         if CM_TUNED_PATH.exists():
             cm_tuned_df = pd.read_csv(CM_TUNED_PATH, index_col=0)
@@ -436,11 +464,14 @@ if method == "lr_sent140_tfidf":
         if best_params is not None:
             st.info(generate_tuned_model_interpretation(tuned_metrics, best_params))
         else:
-            st.info(
+            text = (
                 f"The tuned Logistic Regression model obtained Accuracy = {tuned_metrics['accuracy']:.4f}, "
                 f"Precision = {tuned_metrics['precision']:.4f}, Recall = {tuned_metrics['recall']:.4f}, "
                 f"and F1-score = {tuned_metrics['f1']:.4f}."
             )
+            if "roc_auc" in tuned_metrics:
+                text += f" ROC AUC = {tuned_metrics['roc_auc']:.4f}."
+            st.info(text)
 
         if best_params is not None:
             st.markdown("#### Best hyperparameters")
@@ -457,20 +488,29 @@ if method == "lr_sent140_tfidf":
     st.markdown("### Initial vs tuned model comparison")
 
     if base_metrics is not None and tuned_metrics is not None:
+        metrics_list = ["Accuracy", "Precision", "Recall", "F1-score"]
+        initial_values = [
+            base_metrics["accuracy"],
+            base_metrics["precision"],
+            base_metrics["recall"],
+            base_metrics["f1"]
+        ]
+        tuned_values = [
+            tuned_metrics["accuracy"],
+            tuned_metrics["precision"],
+            tuned_metrics["recall"],
+            tuned_metrics["f1"]
+        ]
+
+        if "roc_auc" in base_metrics and "roc_auc" in tuned_metrics:
+            metrics_list.append("ROC AUC")
+            initial_values.append(base_metrics["roc_auc"])
+            tuned_values.append(tuned_metrics["roc_auc"])
+
         comp_df = pd.DataFrame({
-            "Metric": ["Accuracy", "Precision", "Recall", "F1-score"],
-            "Initial model": [
-                base_metrics["accuracy"],
-                base_metrics["precision"],
-                base_metrics["recall"],
-                base_metrics["f1"]
-            ],
-            "Tuned model": [
-                tuned_metrics["accuracy"],
-                tuned_metrics["precision"],
-                tuned_metrics["recall"],
-                tuned_metrics["f1"]
-            ]
+            "Metric": metrics_list,
+            "Initial model": initial_values,
+            "Tuned model": tuned_values
         })
 
         comp_df["Difference"] = comp_df["Tuned model"] - comp_df["Initial model"]

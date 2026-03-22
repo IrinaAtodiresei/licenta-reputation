@@ -5,7 +5,14 @@ import joblib
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
+    roc_auc_score,
+)
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.pipeline import Pipeline
 
@@ -103,11 +110,13 @@ def main():
 
     print("\nEvaluating best model on test set...")
     y_pred = best_model.predict(X_test)
+    y_prob = best_model.predict_proba(X_test)[:, 1]
 
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred, average="binary")
     recall = recall_score(y_test, y_pred, average="binary")
     f1 = f1_score(y_test, y_pred, average="binary")
+    roc_auc = roc_auc_score(y_test, y_prob)
 
     tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
 
@@ -116,6 +125,7 @@ def main():
         "precision": float(precision),
         "recall": float(recall),
         "f1": float(f1),
+        "roc_auc": float(roc_auc),
         "true_positive": int(tp),
         "true_negative": int(tn),
         "false_positive": int(fp),
