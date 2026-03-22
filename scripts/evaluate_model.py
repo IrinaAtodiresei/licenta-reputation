@@ -1,91 +1,140 @@
 import json
-import joblib
-import pandas as pd
-import numpy as np
 from pathlib import Path
 
-from sklearn.model_selection import train_test_split, cross_val_score
+import joblib
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
-    confusion_matrix,
     accuracy_score,
     precision_score,
     recall_score,
     f1_score,
-    classification_report
+    confusion_matrix,
+    roc_auc_score,
 )
+from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-MODEL_PATH = BASE_DIR / "models" / "sentiment_lr_sent140.joblib"
-TFIDF_PATH = BASE_DIR / "models" / "tfidf_sent140.joblib"
 DATA_PATH = BASE_DIR / "data" / "training.1600000.processed.noemoticon.csv"
-OUT_DIR = BASE_DIR / "evaluation"
-OUT_DIR.mkdir(exist_ok=True)
+MODELS_DIR = BASE_DIR / "models"
+EVAL_DIR = BASE_DIR / "evaluation"
 
-print("Loading dataset...")
+MODELS_DIR.mkdir(exist_ok=True)
+EVAL_DIR.mkdir(exist_ok=True)
 
-# Sentiment140 original: fara header
-df = pd.read_csv(
-    DATA_PATH,
-    encoding="latin-1",
-    header=None,
-    names=["target", "ids", "date", "flag", "user", "text"]
-)
 
-# pastram doar clasele negative si pozitive
-df = df[df["target"].isin([0, 4])].copy()
+def load_sentiment140():
+    df = pd.read_csv(
+        DATA_PATH,
+        encoding="latin-1",
+        header=None
+    )
 
-# convertim la 0/1
-df["label"] = df["target"].map({0: 0, 4: 1})
+    if df.shape[1] < 6:
+        raise ValueError("Fișierul Sentiment140 nu are formatul așteptat.")
 
-# eliminam valori lipsa
-df = df.dropna(subset=["text", "label"])
+    df = df[[0, 5]].copy()
+    df.columns = ["target", "text"]
 
-X = df["text"].astype(str)
-y = df["label"].astype(int)
+    df = df[df["target"].isin([0, 4])].copy()
+    df["label"] = df["target"].map({0: 0, 4: 1})
 
-print("Rows used:", len(df))
+    df["text"] = df["text"].astype(str).fillna("").str.strip()
+    df = df[df["text"] != ""]
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
-)
+    return df[["text", "label"]]
 
-print("Loading model and TF-IDF...")
-model = joblib.load(MODEL_PATH)
-tfidf = joblib.load(TFIDF_PATH)
 
-X_test_tfidf = tfidf.transform(X_test)
-y_pred = model.predict(X_test_tfidf)
+def main():
+    print("Loading dataset...")
+    df = load_sentiment140()
 
-cm = confusion_matrix(y_test, y_pred)
-tn, fp, fn, tp = cm.ravel()
+    X = df["text"]
+    y = df["label"]
 
-metrics = {
-    "accuracy": float(accuracy_score(y_test, y_pred)),
-    "precision": float(precision_score(y_test, y_pred)),
-    "recall": float(recall_score(y_test, y_pred)),
-    "f1": float(f1_score(y_test, y_pred)),
-    "true_positive": int(tp),
-    "true_negative": int(tn),
-    "false_positive": int(fp),
-    "false_negative": int(fn),
-    "classification_report": classification_report(y_test, y_pred, output_dict=True)
-}
+    print("Creating shared train/test split...")
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y
+    )
 
-with open(OUT_DIR / "metrics.json", "w", encoding="utf-8") as f:
-    json.dump(metrics, f, indent=2)
+    print("Saving shared test set for fair comparison...")
+    joblib.dump(X_test, EVAL_DIR / "X_test.pkl")
+    joblib.dump(y_test, EVAL_DIR / "y_test.pkl")
 
-pd.DataFrame(
-    cm,
-    index=["actual_neg", "actual_pos"],
-    columns=["pred_neg", "pred_pos"]
-).to_csv(OUT_DIR / "confusion_matrix.csv")
+    model = Pipeline([
+        ("tfidf", TfidfVectorizer(
+            ngram_range=(1, 1),
+            max_features=10000
+        )),
+        ("clf", LogisticRegression(
+            C=1.0,
+            solver="lbfgs",
+            max_iter=1000,
+            random_state=42
+        ))
+    ])
 
-print("Evaluarea a fost salvată.")
+    print("Training initial model...")
+    model.fit(X_train, y_train)
 
-# CV simplu pe reprezentarea curenta
-X_all_tfidf = tfidf.transform(X)
-cv_scores = cross_val_score(model, X_all_tfidf, y, cv=5, scoring="accuracy")
+    print("Evaluating initial model...")
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]
 
-print("CV accuracy scores:", cv_scores)
-print("Mean CV accuracy:", np.mean(cv_scores))
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred, average="binary")
+    recall = recall_score(y_test, y_pred, average="binary")
+    f1 = f1_score(y_test, y_pred, average="binary")
+    roc_auc = roc_auc_score(y_test, y_prob)
+
+    tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+
+    metrics = {
+        "accuracy": float(accuracy),
+        "precision": float(precision),
+        "recall": float(recall),
+        "f1": float(f1),
+        "roc_auc": float(roc_auc),
+        "true_positive": int(tp),
+        "true_negative": int(tn),
+        "false_positive": int(fp),
+        "false_negative": int(fn)
+    }
+
+    cm_df = pd.DataFrame(
+        [[tn, fp], [fn, tp]],
+        index=["Actual Negative", "Actual Positive"],
+        columns=["Predicted Negative", "Predicted Positive"]
+    )
+
+    model_path = MODELS_DIR / "lr_sent140_tfidf.pkl"
+    metrics_path = EVAL_DIR / "metrics.json"
+    cm_path = EVAL_DIR / "confusion_matrix.csv"
+
+    print("Saving initial model...")
+    joblib.dump(model, model_path)
+
+    print("Saving metrics.json...")
+    with open(metrics_path, "w", encoding="utf-8") as f:
+        json.dump(metrics, f, indent=4)
+
+    print("Saving confusion_matrix.csv...")
+    cm_df.to_csv(cm_path)
+
+    print("\nDone.")
+    print(f"Model saved to: {model_path}")
+    print(f"Metrics saved to: {metrics_path}")
+    print(f"Confusion matrix saved to: {cm_path}")
+    print(f"Shared X_test saved to: {EVAL_DIR / 'X_test.pkl'}")
+    print(f"Shared y_test saved to: {EVAL_DIR / 'y_test.pkl'}")
+
+
+if __name__ == "__main__":
+    main()
