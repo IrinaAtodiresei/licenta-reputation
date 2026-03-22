@@ -7,3 +7,4 @@ requests
 joblib
 scikit-learn
 vaderSentiment
+matplotlib
