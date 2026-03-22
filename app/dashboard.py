@@ -32,6 +32,74 @@ def read_df(sql: str, params=None) -> pd.DataFrame:
         return pd.read_sql_query(sql, conn, params=params)
 
 
+def generate_interpretation(company, method_name, total_mentions, avg_score, pct_negative, pct_disagreement):
+    if company == "All":
+        company_text = "for the selected companies"
+    else:
+        company_text = f"for {company}"
+
+    if method_name == "Logistic Regression (Sent140)":
+        method_text = "using the Logistic Regression model trained on Sent140"
+    else:
+        method_text = "using the VADER rule-based sentiment analyzer"
+
+    if avg_score >= 0.60:
+        sentiment_text = (
+            "The overall sentiment appears predominantly positive, which suggests a generally favorable online perception."
+        )
+    elif avg_score >= 0.45:
+        sentiment_text = (
+            "The overall sentiment is mixed to moderately positive, which suggests a balanced perception with both positive and negative signals."
+        )
+    else:
+        sentiment_text = (
+            "The overall sentiment leans negative, which may suggest weaker public perception or more critical discussions."
+        )
+
+    if pct_negative >= 40:
+        negative_text = (
+            "The share of negative mentions is high, which may indicate visible reputation risks."
+        )
+    elif pct_negative >= 25:
+        negative_text = (
+            "There is a noticeable share of negative mentions, but negativity is not dominant."
+        )
+    else:
+        negative_text = (
+            "The share of negative mentions is relatively low, which supports a more stable reputation profile."
+        )
+
+    if pct_disagreement >= 30:
+        disagreement_text = (
+            "The disagreement between Logistic Regression and VADER is high, so the sentiment results should be interpreted with caution."
+        )
+    elif pct_disagreement >= 15:
+        disagreement_text = (
+            "There is a moderate disagreement between Logistic Regression and VADER, which suggests that some posts are more difficult to classify consistently."
+        )
+    else:
+        disagreement_text = (
+            "The disagreement between Logistic Regression and VADER is relatively low, which suggests a fairly consistent sentiment pattern."
+        )
+
+    return (
+        f"Based on the selected filters, {total_mentions} mentions were analyzed {company_text} {method_text}. "
+        f"{sentiment_text} {negative_text} {disagreement_text}"
+    )
+
+
+def generate_method_note(method_name):
+    if method_name == "Logistic Regression (Sent140)":
+        return (
+            "This view uses a machine learning model trained on the Sent140 dataset. "
+            "It is useful for a more data-driven sentiment classification approach."
+        )
+    return (
+        "This view uses VADER, a lexicon and rule-based sentiment analyzer. "
+        "It is useful for quick sentiment scoring, but it may interpret context differently than the machine learning model."
+    )
+
+
 METHODS = {
     "Logistic Regression (Sent140)": "lr_sent140_tfidf",
     "VADER": "vader",
@@ -149,25 +217,25 @@ else:
     st.info("Nu există date pentru filtrul selectat.")
 
 # -----------------------------
-# Charts
+# Interpretation
 # -----------------------------
-st.subheader("Charts")
-c1, c2, c3 = st.columns(3)
+st.subheader("Interpretation")
 
-with c1:
-    st.caption("Mentions per company")
-    if not summary.empty:
-        st.bar_chart(summary.set_index("company_name")[["mentions"]])
+if total_mentions > 0:
+    interpretation = generate_interpretation(
+        company=company,
+        method_name=method_name,
+        total_mentions=total_mentions,
+        avg_score=avg_score,
+        pct_negative=pct_neg,
+        pct_disagreement=pct_diff
+    )
+    st.info(interpretation)
+else:
+    st.info("No data is available for the current selection, so no interpretation can be generated.")
 
-with c2:
-    st.caption("% Negative per company")
-    if not summary.empty:
-        st.bar_chart(summary.set_index("company_name")[["pct_negative"]])
-
-with c3:
-    st.caption("Avg score per company")
-    if not summary.empty:
-        st.bar_chart(summary.set_index("company_name")[["avg_score"]])
+st.markdown("### Method note")
+st.write(generate_method_note(method_name))
 
 st.markdown("---")
 
@@ -220,11 +288,25 @@ if method == "lr_sent140_tfidf":
         c3.metric("Recall", f"{metrics['recall']:.4f}")
         c4.metric("F1-score", f"{metrics['f1']:.4f}")
 
+        st.markdown("### Evaluation interpretation")
+
+        eval_text = (
+            f"The Logistic Regression model obtained an accuracy of {metrics['accuracy']:.4f}, "
+            f"a precision of {metrics['precision']:.4f}, a recall of {metrics['recall']:.4f}, "
+            f"and an F1-score of {metrics['f1']:.4f}. "
+        )
+
+        if metrics["f1"] >= 0.80:
+            eval_text += "These values indicate strong and reliable classification performance."
+        elif metrics["f1"] >= 0.65:
+            eval_text += "These values indicate acceptable performance, although there is still room for improvement."
+        else:
+            eval_text += "These values suggest limited classification performance and indicate that the model may need further improvement."
+
+        st.info(eval_text)
+
         st.markdown("### Confusion matrix")
         st.dataframe(cm_df, use_container_width=True)
-
-        st.markdown("### Confusion matrix chart")
-        st.bar_chart(cm_df)
 
         st.markdown("### Detailed counts")
 
