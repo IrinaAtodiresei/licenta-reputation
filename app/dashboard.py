@@ -7,7 +7,6 @@ import streamlit as st
 from dotenv import load_dotenv
 import psycopg
 
-
 load_dotenv()
 
 PG_DSN = os.getenv("PG_DSN")
@@ -129,6 +128,24 @@ METHODS = {
 }
 
 # -----------------------------
+# Session state init
+# -----------------------------
+if "loaded" not in st.session_state:
+    st.session_state.loaded = False
+
+if "loaded_method" not in st.session_state:
+    st.session_state.loaded_method = None
+
+if "summary" not in st.session_state:
+    st.session_state.summary = pd.DataFrame()
+
+if "disagree_company" not in st.session_state:
+    st.session_state.disagree_company = pd.DataFrame()
+
+if "disagreements" not in st.session_state:
+    st.session_state.disagreements = pd.DataFrame()
+
+# -----------------------------
 # Sidebar controls
 # -----------------------------
 st.sidebar.title("Controls")
@@ -136,21 +153,20 @@ st.sidebar.title("Controls")
 method_name = st.sidebar.radio("Method", list(METHODS.keys()), index=0)
 method = METHODS[method_name]
 
-company = st.sidebar.selectbox("Company", ["All", "Apple", "Samsung", "Google"], index=0)
-only_disagreements = st.sidebar.checkbox("Show only disagreements", value=True)
 limit_rows = st.sidebar.slider("Rows in disagreements table", 20, 500, 100, 20)
-refresh = st.sidebar.button("🔄 Refresh data")
 
 st.sidebar.markdown("---")
 st.sidebar.caption("Tip: dacă nu vezi date, verifică view-urile în schema reputation.")
 
 # -----------------------------
-# Load data (cache in session)
+# Reload logic
 # -----------------------------
-if "loaded" not in st.session_state:
-    st.session_state.loaded = False
+need_reload = (
+    not st.session_state.loaded
+    or st.session_state.loaded_method != method
+)
 
-if refresh or not st.session_state.loaded:
+if need_reload:
     try:
         summary = read_df("""
             SELECT *
@@ -161,24 +177,43 @@ if refresh or not st.session_state.loaded:
         st.error("Nu găsesc view-ul reputation.v_company_sentiment_summary. Creează-l în DB (schema reputation).")
         st.stop()
 
-    disagree_company = read_df("""
-        SELECT *
-        FROM reputation.v_company_method_disagreement
-    """)
+    try:
+        disagree_company = read_df("""
+            SELECT *
+            FROM reputation.v_company_method_disagreement
+        """)
+    except Exception:
+        st.error("Nu găsesc view-ul reputation.v_company_method_disagreement.")
+        st.stop()
 
-    disagreements = read_df("""
-        SELECT *
-        FROM reputation.v_sentiment_disagreements
-    """)
+    try:
+        disagreements = read_df("""
+            SELECT *
+            FROM reputation.v_sentiment_disagreements
+        """)
+    except Exception:
+        st.error("Nu găsesc view-ul reputation.v_sentiment_disagreements.")
+        st.stop()
 
     st.session_state.summary = summary
     st.session_state.disagree_company = disagree_company
     st.session_state.disagreements = disagreements
     st.session_state.loaded = True
+    st.session_state.loaded_method = method
 
 summary = st.session_state.summary.copy()
 disagree_company = st.session_state.disagree_company.copy()
 disagreements = st.session_state.disagreements.copy()
+
+# -----------------------------
+# Dynamic company options
+# -----------------------------
+if not summary.empty and "company_name" in summary.columns:
+    company_options = ["All"] + sorted(summary["company_name"].dropna().unique().tolist())
+else:
+    company_options = ["All"]
+
+company = st.sidebar.selectbox("Company", company_options, index=0)
 
 # -----------------------------
 # Filter company
@@ -222,7 +257,8 @@ cols_order = [
 ]
 
 if not summary.empty:
-    summary = summary[cols_order].sort_values("mentions", ascending=False)
+    existing_cols = [col for col in cols_order if col in summary.columns]
+    summary = summary[existing_cols].sort_values("mentions", ascending=False)
     st.dataframe(summary, use_container_width=True)
 
     csv_bytes = summary.to_csv(index=False).encode("utf-8")
@@ -279,12 +315,13 @@ keep_cols = [
 ]
 
 if not disagreements.empty:
-    disagreements = disagreements[keep_cols].sort_values("published_at", ascending=False).head(limit_rows)
+    existing_keep_cols = [col for col in keep_cols if col in disagreements.columns]
+    disagreements = disagreements[existing_keep_cols].sort_values(
+        "published_at", ascending=False
+    ).head(limit_rows)
     st.dataframe(disagreements, use_container_width=True)
 else:
     st.info("Nu există postări în care LR și VADER să difere pentru filtrul selectat.")
-
-st.caption("Tip: folosește filtrele din stânga + butonul Refresh.")
 
 # -----------------------------
 # Model evaluation
