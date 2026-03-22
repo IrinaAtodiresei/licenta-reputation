@@ -5,6 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5e144aed-1f1e-4264-bf5c-2969611e1c6d" name="Changes" comment="Show confusion matrix only for Logistic Regression">
+      <change afterPath="$PROJECT_DIR$/scripts/tune_model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/dashboard.py" afterDir="false" />
     </list>
@@ -246,7 +247,15 @@
       <option name="project" value="LOCAL" />
       <updated>1773309460484</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Show confusion matrix only for Logistic Regression">
+      <option name="closed" value="true" />
+      <created>1774192960960</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1774192960960</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
