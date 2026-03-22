@@ -10,130 +10,164 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
     f1_score,
-    confusion_matrix,
     roc_auc_score,
+    confusion_matrix,
 )
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DATA_PATH = BASE_DIR / "data" / "training.1600000.processed.noemoticon.csv"
 MODELS_DIR = BASE_DIR / "models"
 EVAL_DIR = BASE_DIR / "evaluation"
+
+X_TRAIN_PATH = EVAL_DIR / "X_train.pkl"
+X_TEST_PATH = EVAL_DIR / "X_test.pkl"
+Y_TRAIN_PATH = EVAL_DIR / "y_train.pkl"
+Y_TEST_PATH = EVAL_DIR / "y_test.pkl"
+
+BEST_PARAMS_PATH = EVAL_DIR / "best_params.json"
+CV_RESULTS_PATH = EVAL_DIR / "cv_results.csv"
+METRICS_TUNED_PATH = EVAL_DIR / "metrics_tuned.json"
+CM_TUNED_PATH = EVAL_DIR / "confusion_matrix_tuned.csv"
+TUNED_MODEL_PATH = MODELS_DIR / "lr_sent140_tuned.joblib"
 
 MODELS_DIR.mkdir(exist_ok=True)
 EVAL_DIR.mkdir(exist_ok=True)
 
 
-def load_sentiment140():
-    df = pd.read_csv(
-        DATA_PATH,
-        encoding="latin-1",
-        header=None
-    )
+def load_train_test_data():
+    missing = [
+        str(path.name)
+        for path in [X_TRAIN_PATH, X_TEST_PATH, Y_TRAIN_PATH, Y_TEST_PATH]
+        if not path.exists()
+    ]
+    if missing:
+        raise FileNotFoundError(
+            f"Lipsesc fișierele necesare pentru tuning: {', '.join(missing)}. "
+            f"Rulează mai întâi scriptul care salvează split-ul train/test."
+        )
 
-    if df.shape[1] < 6:
-        raise ValueError("Fișierul Sentiment140 nu are formatul așteptat.")
+    X_train = pd.read_pickle(X_TRAIN_PATH)
+    X_test = pd.read_pickle(X_TEST_PATH)
+    y_train = pd.read_pickle(Y_TRAIN_PATH)
+    y_test = pd.read_pickle(Y_TEST_PATH)
 
-    df = df[[0, 5]].copy()
-    df.columns = ["target", "text"]
+    return X_train, X_test, y_train, y_test
 
-    df = df[df["target"].isin([0, 4])].copy()
-    df["label"] = df["target"].map({0: 0, 4: 1})
 
-    df["text"] = df["text"].astype(str).fillna("").str.strip()
-    df = df[df["text"] != ""]
+def build_pipeline():
+    return Pipeline([
+        ("tfidf", TfidfVectorizer(stop_words="english")),
+        ("clf", LogisticRegression(max_iter=1000, random_state=42)),
+    ])
 
-    return df[["text", "label"]]
+
+def build_param_grid():
+    return {
+        "tfidf__max_features": [5000, 10000],
+        "tfidf__ngram_range": [(1, 1), (1, 2)],
+        "tfidf__min_df": [2, 5],
+        "clf__C": [0.1, 1.0, 10.0],
+        "clf__solver": ["liblinear"],
+        "clf__penalty": ["l2"],
+    }
+
+
+def save_json(path: Path, data: dict):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
 
 
 def main():
-    print("Loading dataset...")
-    df = load_sentiment140()
+    print("Încărcare train/test split...")
+    X_train, X_test, y_train, y_test = load_train_test_data()
 
-    X = df["text"]
-    y = df["label"]
+    print(f"Train size: {len(X_train)}")
+    print(f"Test size: {len(X_test)}")
 
-    print("Creating shared train/test split...")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X,
-        y,
-        test_size=0.2,
-        random_state=42,
-        stratify=y
+    pipeline = build_pipeline()
+    param_grid = build_param_grid()
+
+    print("Pornesc GridSearchCV...")
+    grid = GridSearchCV(
+        estimator=pipeline,
+        param_grid=param_grid,
+        scoring="f1",
+        cv=5,
+        n_jobs=-1,
+        verbose=2,
+        return_train_score=True,
     )
 
-    print("Saving shared test set for fair comparison...")
-    joblib.dump(X_test, EVAL_DIR / "X_test.pkl")
-    joblib.dump(y_test, EVAL_DIR / "y_test.pkl")
+    grid.fit(X_train, y_train)
 
-    model = Pipeline([
-        ("tfidf", TfidfVectorizer(
-            ngram_range=(1, 1),
-            max_features=10000
-        )),
-        ("clf", LogisticRegression(
-            C=1.0,
-            solver="lbfgs",
-            max_iter=1000,
-            random_state=42
-        ))
-    ])
+    print("Tuning finalizat.")
+    print("Best params:", grid.best_params_)
+    print("Best CV F1:", grid.best_score_)
 
-    print("Training initial model...")
-    model.fit(X_train, y_train)
+    best_model = grid.best_estimator_
 
-    print("Evaluating initial model...")
-    y_pred = model.predict(X_test)
-    y_prob = model.predict_proba(X_test)[:, 1]
+    print("Evaluez modelul tuned pe test set...")
+    y_pred = best_model.predict(X_test)
+    y_prob = best_model.predict_proba(X_test)[:, 1]
 
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, average="binary")
-    recall = recall_score(y_test, y_pred, average="binary")
-    f1 = f1_score(y_test, y_pred, average="binary")
-    roc_auc = roc_auc_score(y_test, y_prob)
+    acc = accuracy_score(y_test, y_pred)
+    prec = precision_score(y_test, y_pred)
+    rec = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    roc = roc_auc_score(y_test, y_prob)
 
-    tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+    cm = confusion_matrix(y_test, y_pred)
+    tn, fp, fn, tp = cm.ravel()
 
-    metrics = {
-        "accuracy": float(accuracy),
-        "precision": float(precision),
-        "recall": float(recall),
+    tuned_metrics = {
+        "accuracy": float(acc),
+        "precision": float(prec),
+        "recall": float(rec),
         "f1": float(f1),
-        "roc_auc": float(roc_auc),
+        "roc_auc": float(roc),
         "true_positive": int(tp),
         "true_negative": int(tn),
         "false_positive": int(fp),
-        "false_negative": int(fn)
+        "false_negative": int(fn),
+        "best_cv_f1": float(grid.best_score_),
     }
 
+    save_json(BEST_PARAMS_PATH, grid.best_params_)
+    save_json(METRICS_TUNED_PATH, tuned_metrics)
+
+    cv_results = pd.DataFrame(grid.cv_results_)
+
+    cols_to_keep = [
+        "params",
+        "mean_train_score",
+        "std_train_score",
+        "mean_test_score",
+        "std_test_score",
+        "rank_test_score",
+    ]
+    cv_results = cv_results[cols_to_keep].sort_values("rank_test_score", ascending=True)
+    cv_results.to_csv(CV_RESULTS_PATH, index=False)
+
     cm_df = pd.DataFrame(
-        [[tn, fp], [fn, tp]],
+        cm,
         index=["Actual Negative", "Actual Positive"],
-        columns=["Predicted Negative", "Predicted Positive"]
+        columns=["Predicted Negative", "Predicted Positive"],
     )
+    cm_df.to_csv(CM_TUNED_PATH)
 
-    model_path = MODELS_DIR / "lr_sent140_tfidf.pkl"
-    metrics_path = EVAL_DIR / "metrics.json"
-    cm_path = EVAL_DIR / "confusion_matrix.csv"
+    joblib.dump(best_model, TUNED_MODEL_PATH)
 
-    print("Saving initial model...")
-    joblib.dump(model, model_path)
+    print(f"Salvat: {BEST_PARAMS_PATH}")
+    print(f"Salvat: {CV_RESULTS_PATH}")
+    print(f"Salvat: {METRICS_TUNED_PATH}")
+    print(f"Salvat: {CM_TUNED_PATH}")
+    print(f"Salvat: {TUNED_MODEL_PATH}")
 
-    print("Saving metrics.json...")
-    with open(metrics_path, "w", encoding="utf-8") as f:
-        json.dump(metrics, f, indent=4)
-
-    print("Saving confusion_matrix.csv...")
-    cm_df.to_csv(cm_path)
-
-    print("\nDone.")
-    print(f"Model saved to: {model_path}")
-    print(f"Metrics saved to: {metrics_path}")
-    print(f"Confusion matrix saved to: {cm_path}")
-    print(f"Shared X_test saved to: {EVAL_DIR / 'X_test.pkl'}")
-    print(f"Shared y_test saved to: {EVAL_DIR / 'y_test.pkl'}")
+    print("Metrici finale pe test set:")
+    for key, value in tuned_metrics.items():
+        print(f"{key}: {value}")
 
 
 if __name__ == "__main__":

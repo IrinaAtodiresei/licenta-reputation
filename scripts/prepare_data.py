@@ -1,59 +1,50 @@
-import json
+from sklearn.model_selection import train_test_split
 import pandas as pd
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_PATH = BASE_DIR / "data" / "training.1600000.processed.noemoticon.csv"
-OUT_DIR = BASE_DIR / "evaluation"
-OUT_DIR.mkdir(exist_ok=True)
+EVAL_DIR = BASE_DIR / "evaluation"
 
-print("Loading dataset...")
+EVAL_DIR.mkdir(exist_ok=True)
 
-df = pd.read_csv(
-    DATA_PATH,
-    encoding="latin-1",
-    header=None,
-    names=["target", "ids", "date", "flag", "user", "text"]
-)
+def load_data():
+    df = pd.read_csv(
+        DATA_PATH,
+        encoding="latin-1",
+        header=None,
+        names=["target", "ids", "date", "flag", "user", "text"]
+    )
 
-initial_rows = len(df)
+    df = df[["target", "text"]].copy()
+    df = df[df["target"].isin([0, 4])]
+    df["target"] = df["target"].map({0: 0, 4: 1})
 
-# păstrăm doar clasele negative și pozitive
-df = df[df["target"].isin([0, 4])].copy()
+    return df
 
-# transformăm în 0 / 1
-df["label"] = df["target"].map({0: 0, 4: 1})
 
-null_texts = df["text"].isna().sum()
-null_labels = df["label"].isna().sum()
+def main():
+    df = load_data()
 
-df = df.dropna(subset=["text", "label"])
-after_dropna = len(df)
+    X = df["text"]
+    y = df["target"]
 
-duplicates = df.duplicated(subset=["text", "label"]).sum()
-df = df.drop_duplicates(subset=["text", "label"])
-after_dedup = len(df)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y
+    )
 
-df["text"] = df["text"].astype(str).str.strip()
-df = df[df["text"] != ""]
+    # 🔥 SALVARE COMPLETĂ
+    X_train.to_pickle(EVAL_DIR / "X_train.pkl")
+    X_test.to_pickle(EVAL_DIR / "X_test.pkl")
+    y_train.to_pickle(EVAL_DIR / "y_train.pkl")
+    y_test.to_pickle(EVAL_DIR / "y_test.pkl")
 
-df["text_length"] = df["text"].str.len()
+    print("Train/Test split salvat cu succes.")
 
-report = {
-    "initial_rows": int(initial_rows),
-    "null_texts": int(null_texts),
-    "null_labels": int(null_labels),
-    "after_dropna": int(after_dropna),
-    "duplicates_removed": int(duplicates),
-    "final_rows": int(len(df)),
-    "class_distribution": {str(k): int(v) for k, v in df["label"].value_counts().to_dict().items()},
-    "avg_text_length": float(df["text_length"].mean()),
-    "median_text_length": float(df["text_length"].median()),
-    "min_text_length": int(df["text_length"].min()),
-    "max_text_length": int(df["text_length"].max())
-}
 
-with open(OUT_DIR / "data_cleaning_report.json", "w", encoding="utf-8") as f:
-    json.dump(report, f, indent=2)
-
-print("Raportul de curățare a fost salvat.")
+if __name__ == "__main__":
+    main()

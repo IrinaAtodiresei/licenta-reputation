@@ -23,6 +23,10 @@ EVAL_DIR = BASE_DIR / "evaluation"
 METRICS_PATH = EVAL_DIR / "metrics.json"
 CM_PATH = EVAL_DIR / "confusion_matrix.csv"
 
+METRICS_TUNED_PATH = EVAL_DIR / "metrics_tuned.json"
+CM_TUNED_PATH = EVAL_DIR / "confusion_matrix_tuned.csv"
+BEST_PARAMS_PATH = EVAL_DIR / "best_params.json"
+
 
 def get_conn():
     return psycopg.connect(PG_DSN)
@@ -129,7 +133,7 @@ def generate_confusion_matrix_interpretation(metrics):
     )
 
 
-def plot_confusion_matrix_heatmap(cm_df: pd.DataFrame):
+def plot_confusion_matrix_heatmap(cm_df: pd.DataFrame, title="Confusion Matrix"):
     fig, ax = plt.subplots(figsize=(7, 4.8))
 
     im = ax.imshow(cm_df.values, cmap="Blues")
@@ -141,7 +145,7 @@ def plot_confusion_matrix_heatmap(cm_df: pd.DataFrame):
 
     ax.set_xlabel("Predicted label")
     ax.set_ylabel("Actual label")
-    ax.set_title("Confusion Matrix")
+    ax.set_title(title)
 
     threshold = cm_df.values.max() / 2 if cm_df.values.size > 0 else 0
 
@@ -163,6 +167,111 @@ def plot_confusion_matrix_heatmap(cm_df: pd.DataFrame):
     fig.colorbar(im, ax=ax)
     plt.tight_layout()
     return fig
+
+
+def format_best_params_text(best_params):
+    if not best_params:
+        return "No tuned hyperparameters are available."
+
+    mapping = {
+        "clf__C": "Regularization strength (C)",
+        "clf__max_iter": "Maximum iterations",
+        "clf__solver": "Solver",
+        "tfidf__max_features": "Maximum TF-IDF features",
+        "tfidf__min_df": "Minimum document frequency",
+        "tfidf__ngram_range": "N-gram range",
+        "tfidf__max_df": "Maximum document frequency",
+    }
+
+    lines = []
+    for key, value in best_params.items():
+        label = mapping.get(key, key)
+        lines.append(f"- **{label}**: {value}")
+    return "\n".join(lines)
+
+
+def generate_tuned_model_interpretation(metrics, best_params):
+    f1 = metrics.get("f1", 0.0)
+    acc = metrics.get("accuracy", 0.0)
+    precision = metrics.get("precision", 0.0)
+    recall = metrics.get("recall", 0.0)
+
+    if f1 >= 0.80:
+        performance_text = "The tuned Logistic Regression model shows strong classification performance."
+    elif f1 >= 0.70:
+        performance_text = "The tuned Logistic Regression model shows good classification performance."
+    else:
+        performance_text = "The tuned Logistic Regression model shows acceptable performance, but there is still room for improvement."
+
+    if best_params:
+        ngram = best_params.get("tfidf__ngram_range")
+        min_df = best_params.get("tfidf__min_df")
+        max_features = best_params.get("tfidf__max_features")
+        c_value = best_params.get("clf__C")
+        solver = best_params.get("clf__solver")
+
+        config_text = (
+            f"The best configuration uses n-grams {ngram}, "
+            f"max_features={max_features}, min_df={min_df}, "
+            f"C={c_value}, and solver={solver}. "
+        )
+    else:
+        config_text = ""
+
+    metrics_text = (
+        f"On evaluation, it obtained Accuracy = {acc:.4f}, "
+        f"Precision = {precision:.4f}, Recall = {recall:.4f}, "
+        f"and F1-score = {f1:.4f}. "
+    )
+
+    explanation_text = (
+        "This indicates that hyperparameter tuning helped identify a more suitable configuration "
+        "for the TF-IDF representation and Logistic Regression classifier."
+    )
+
+    return performance_text + " " + metrics_text + config_text + explanation_text
+
+
+def generate_comparison_text(base_metrics, tuned_metrics):
+    base_f1 = base_metrics.get("f1", 0.0)
+    tuned_f1 = tuned_metrics.get("f1", 0.0)
+
+    base_acc = base_metrics.get("accuracy", 0.0)
+    tuned_acc = tuned_metrics.get("accuracy", 0.0)
+
+    base_precision = base_metrics.get("precision", 0.0)
+    tuned_precision = tuned_metrics.get("precision", 0.0)
+
+    base_recall = base_metrics.get("recall", 0.0)
+    tuned_recall = tuned_metrics.get("recall", 0.0)
+
+    delta_f1 = tuned_f1 - base_f1
+    delta_acc = tuned_acc - base_acc
+    delta_precision = tuned_precision - base_precision
+    delta_recall = tuned_recall - base_recall
+
+    text = (
+        f"Compared to the initial model, the tuned model changes Accuracy by {delta_acc:.4f}, "
+        f"Precision by {delta_precision:.4f}, Recall by {delta_recall:.4f}, "
+        f"and F1-score by {delta_f1:.4f}. "
+    )
+
+    if delta_f1 > 0:
+        text += (
+            "Overall, the tuning process had a positive effect, since the tuned model achieved "
+            "a better balance between precision and recall."
+        )
+    elif delta_f1 < 0:
+        text += (
+            "Overall, the tuning process did not improve the final balance between precision and recall, "
+            "so the initial configuration remains stronger."
+        )
+    else:
+        text += (
+            "Overall, the tuning process produced very similar results to the initial model."
+        )
+
+    return text
 
 
 METHODS = {
@@ -364,7 +473,8 @@ st.markdown("---")
 # -----------------------------
 st.subheader("LR vs VADER disagreement (by company)")
 if not disagree_company.empty:
-    disagree_company = disagree_company.sort_values("pct_different", ascending=False)
+    sort_col = "pct_different" if "pct_different" in disagree_company.columns else disagree_company.columns[-1]
+    disagree_company = disagree_company.sort_values(sort_col, ascending=False)
     st.dataframe(disagree_company, use_container_width=True)
 else:
     st.info("Nu există date despre disagreement pentru filtrul selectat.")
@@ -381,8 +491,9 @@ keep_cols = [
 
 if not disagreements.empty:
     existing_keep_cols = [col for col in keep_cols if col in disagreements.columns]
+    sort_col = "published_at" if "published_at" in disagreements.columns else existing_keep_cols[0]
     disagreements = disagreements[existing_keep_cols].sort_values(
-        "published_at", ascending=False
+        sort_col, ascending=False
     ).head(limit_rows)
     st.dataframe(disagreements, use_container_width=True)
 else:
@@ -396,18 +507,39 @@ st.subheader("Model evaluation")
 
 if method == "vader":
     st.info(
-        "VADER is a rule-based sentiment analyzer, so confusion matrix validation and offline model-training "
-        "metrics are not applicable here. The VADER view is used only for the Reddit sentiment analysis above."
+        "VADER is a rule-based sentiment analyzer, so hyperparameter tuning, "
+        "confusion matrix validation, and offline model-training metrics are not applicable here. "
+        "The VADER view is used only for the Reddit sentiment analysis above."
     )
 
 elif method == "lr_sent140_tfidf":
     base_metrics = None
+    tuned_metrics = None
+    best_params = None
 
     if METRICS_PATH.exists():
         with open(METRICS_PATH, "r", encoding="utf-8") as f:
             base_metrics = json.load(f)
 
-    st.markdown("### Logistic Regression validation")
+    if METRICS_TUNED_PATH.exists():
+        with open(METRICS_TUNED_PATH, "r", encoding="utf-8") as f:
+            tuned_metrics = json.load(f)
+
+    if BEST_PARAMS_PATH.exists():
+        with open(BEST_PARAMS_PATH, "r", encoding="utf-8") as f:
+            best_params = json.load(f)
+
+    st.markdown("### Hyperparameter tuning")
+    st.write(
+        "To improve the Logistic Regression model, a hyperparameter tuning stage was introduced. "
+        "The model was run multiple times using different combinations of TF-IDF and Logistic Regression parameters. "
+        "The best configuration was selected based on validation performance."
+    )
+
+    # -------------------------
+    # Initial model
+    # -------------------------
+    st.markdown("### Initial Logistic Regression model")
 
     if base_metrics is not None:
         c1, c2, c3, c4, c5 = st.columns(5)
@@ -415,32 +547,106 @@ elif method == "lr_sent140_tfidf":
         c2.metric("Precision", f"{base_metrics['precision']:.4f}")
         c3.metric("Recall", f"{base_metrics['recall']:.4f}")
         c4.metric("F1-score", f"{base_metrics['f1']:.4f}")
-        c5.metric("ROC AUC", f"{base_metrics['roc_auc']:.4f}")
+        c5.metric("ROC AUC", f"{base_metrics.get('roc_auc', 0.0):.4f}")
 
         if CM_PATH.exists():
             cm_df = pd.read_csv(CM_PATH, index_col=0)
-
             cm_df.index = ["Actual Negative", "Actual Positive"]
             cm_df.columns = ["Predicted Negative", "Predicted Positive"]
 
-            st.markdown("### Confusion matrix")
-            fig = plot_confusion_matrix_heatmap(cm_df)
+            st.markdown("#### Initial confusion matrix")
+            fig = plot_confusion_matrix_heatmap(cm_df, title="Initial Confusion Matrix")
             st.pyplot(fig)
 
-        st.markdown("### Interpretation (confusion matrix)")
+        st.markdown("#### Interpretation")
+        st.info(
+            "This is the baseline Logistic Regression model before hyperparameter tuning. "
+            "Its results serve as the reference point for evaluating whether tuning improved performance."
+        )
         st.info(generate_confusion_matrix_interpretation(base_metrics))
-
     else:
-        st.warning("Logistic Regression evaluation files were not found.")
+        st.warning("Initial evaluation files were not found.")
 
     st.markdown("---")
-    st.subheader("Offline experiment: Logistic Regression vs DistilBERT on Sentiment140")
+
+    # -------------------------
+    # Tuned model
+    # -------------------------
+    st.markdown("### Tuned Logistic Regression model")
+
+    if tuned_metrics is not None:
+        t1, t2, t3, t4, t5 = st.columns(5)
+        t1.metric("Accuracy", f"{tuned_metrics['accuracy']:.4f}")
+        t2.metric("Precision", f"{tuned_metrics['precision']:.4f}")
+        t3.metric("Recall", f"{tuned_metrics['recall']:.4f}")
+        t4.metric("F1-score", f"{tuned_metrics['f1']:.4f}")
+        t5.metric("ROC AUC", f"{tuned_metrics.get('roc_auc', 0.0):.4f}")
+
+        if CM_TUNED_PATH.exists():
+            cm_tuned_df = pd.read_csv(CM_TUNED_PATH, index_col=0)
+            cm_tuned_df.index = ["Actual Negative", "Actual Positive"]
+            cm_tuned_df.columns = ["Predicted Negative", "Predicted Positive"]
+
+            st.markdown("#### Tuned confusion matrix")
+            fig_tuned = plot_confusion_matrix_heatmap(cm_tuned_df, title="Tuned Confusion Matrix")
+            st.pyplot(fig_tuned)
+
+        st.markdown("#### Best hyperparameters")
+        if best_params is not None:
+            st.markdown(format_best_params_text(best_params))
+        else:
+            st.info("Best hyperparameters file was not found.")
+
+        st.markdown("#### Interpretation")
+        st.success(generate_tuned_model_interpretation(tuned_metrics, best_params))
+    else:
+        st.warning("Tuned evaluation files were not found. Run scripts/tune_model.py first.")
+
+    st.markdown("---")
+
+    # -------------------------
+    # Comparison
+    # -------------------------
+    st.markdown("### Initial vs tuned model comparison")
+
+    if base_metrics is not None and tuned_metrics is not None:
+        comparison_df = pd.DataFrame({
+            "Metric": ["Accuracy", "Precision", "Recall", "F1-score", "ROC AUC"],
+            "Initial model": [
+                base_metrics["accuracy"],
+                base_metrics["precision"],
+                base_metrics["recall"],
+                base_metrics["f1"],
+                base_metrics.get("roc_auc", 0.0),
+            ],
+            "Tuned model": [
+                tuned_metrics["accuracy"],
+                tuned_metrics["precision"],
+                tuned_metrics["recall"],
+                tuned_metrics["f1"],
+                tuned_metrics.get("roc_auc", 0.0),
+            ]
+        })
+
+        comparison_df["Difference"] = comparison_df["Tuned model"] - comparison_df["Initial model"]
+        st.dataframe(comparison_df, use_container_width=True)
+
+        st.markdown("#### Comparison interpretation")
+        st.info(generate_comparison_text(base_metrics, tuned_metrics))
+    else:
+        st.info("Both initial and tuned metrics are required for comparison.")
+
+    st.markdown("---")
+
+    # -------------------------
+    # Separate experiment
+    # -------------------------
+    st.subheader("Additional experiment: Logistic Regression vs DistilBERT on Sentiment140")
 
     st.info(
-        "The section below presents a separate offline comparison between TF-IDF + Logistic Regression "
-        "and DistilBERT on the Sentiment140 dataset. It is not based on the Reddit data displayed above. "
-        "Both methods were evaluated on exactly the same sampled subset of 10,000 instances "
-        "(sampled from the original 1.6M dataset), using the same 80% / 20% train-test split."
+        "This is a separate offline experiment and should not be confused with the hyperparameter tuning section above. "
+        "Both methods were evaluated on the same sampled subset of 10,000 instances from Sentiment140, "
+        "using the same 80% / 20% train-test split."
     )
 
     experiment_df = pd.DataFrame({
@@ -462,16 +668,9 @@ elif method == "lr_sent140_tfidf":
 
     st.markdown("### Interpretation")
     st.success(
-        "Both methods were evaluated on exactly the same subset of data: the same 10,000-instance sample "
-        "drawn from the original 1.6M Sentiment140 dataset, using the same 80% / 20% train-test split. "
-        "DistilBERT achieved better results on all metrics: Accuracy (+5.52%), Precision (+7.17%), "
-        "Recall (+2.25%), F1-score (+4.67%), and ROC AUC (+5.06%)."
-    )
-
-    st.markdown("### Overall conclusion")
-    st.write(
-        "Overall, DistilBERT is approximately 4.7% more performant than the TF-IDF + Logistic Regression model, "
-        "based on the F1-score, which indicates a better balance between precision and recall."
+        "In this separate experiment, DistilBERT achieved better results on all reported metrics than "
+        "TF-IDF + Logistic Regression. However, this section is distinct from the Logistic Regression "
+        "hyperparameter tuning process presented above."
     )
 
     st.caption(
