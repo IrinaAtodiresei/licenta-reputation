@@ -49,13 +49,13 @@ def load_sentiment140():
 
 
 def main():
-    print("Loading dataset...")
+    print("Loading Sentiment140 dataset...")
     df = load_sentiment140()
 
     X = df["text"]
     y = df["label"]
 
-    print("Creating shared train/test split...")
+    print("Creating baseline train/test split...")
     X_train, X_test, y_train, y_test = train_test_split(
         X,
         y,
@@ -64,11 +64,11 @@ def main():
         stratify=y
     )
 
-    print("Saving shared test set for fair comparison...")
+    print("Saving shared test set for later comparisons...")
     joblib.dump(X_test, EVAL_DIR / "X_test.pkl")
     joblib.dump(y_test, EVAL_DIR / "y_test.pkl")
 
-    model = Pipeline([
+    baseline_model = Pipeline([
         ("tfidf", TfidfVectorizer(
             ngram_range=(1, 1),
             max_features=10000
@@ -81,12 +81,12 @@ def main():
         ))
     ])
 
-    print("Training initial model...")
-    model.fit(X_train, y_train)
+    print("Training baseline Logistic Regression model...")
+    baseline_model.fit(X_train, y_train)
 
-    print("Evaluating initial model...")
-    y_pred = model.predict(X_test)
-    y_prob = model.predict_proba(X_test)[:, 1]
+    print("Evaluating baseline model...")
+    y_pred = baseline_model.predict(X_test)
+    y_prob = baseline_model.predict_proba(X_test)[:, 1]
 
     accuracy = accuracy_score(y_test, y_pred)
     precision = precision_score(y_test, y_pred, average="binary")
@@ -118,18 +118,18 @@ def main():
     metrics_path = EVAL_DIR / "metrics.json"
     cm_path = EVAL_DIR / "confusion_matrix.csv"
 
-    print("Saving initial model...")
-    joblib.dump(model, model_path)
+    print("Saving baseline model...")
+    joblib.dump(baseline_model, model_path)
 
-    print("Saving metrics.json...")
+    print("Saving metrics...")
     with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=4)
 
-    print("Saving confusion_matrix.csv...")
+    print("Saving confusion matrix...")
     cm_df.to_csv(cm_path)
 
     print("\nDone.")
-    print(f"Model saved to: {model_path}")
+    print(f"Baseline model saved to: {model_path}")
     print(f"Metrics saved to: {metrics_path}")
     print(f"Confusion matrix saved to: {cm_path}")
     print(f"Shared X_test saved to: {EVAL_DIR / 'X_test.pkl'}")

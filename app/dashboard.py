@@ -27,6 +27,9 @@ METRICS_TUNED_PATH = EVAL_DIR / "metrics_tuned.json"
 CM_TUNED_PATH = EVAL_DIR / "confusion_matrix_tuned.csv"
 BEST_PARAMS_PATH = EVAL_DIR / "best_params.json"
 
+LR_BASELINE_REDDIT_METRICS_PATH = EVAL_DIR / "lr_baseline_reddit_metrics.json"
+DISTILBERT_REDDIT_METRICS_PATH = EVAL_DIR / "distilbert_reddit_metrics.json"
+
 
 def get_conn():
     return psycopg.connect(PG_DSN)
@@ -272,6 +275,12 @@ def generate_comparison_text(base_metrics, tuned_metrics):
         )
 
     return text
+
+
+def pct_improvement(new, old):
+    if old == 0:
+        return "N/A"
+    return f"{((new - old) / old) * 100:+.2f}%"
 
 
 METHODS = {
@@ -542,12 +551,11 @@ elif method == "lr_sent140_tfidf":
     st.markdown("### Initial Logistic Regression model")
 
     if base_metrics is not None:
-        c1, c2, c3, c4, c5 = st.columns(5)
+        c1, c2, c3, c4 = st.columns(4)
         c1.metric("Accuracy", f"{base_metrics['accuracy']:.4f}")
         c2.metric("Precision", f"{base_metrics['precision']:.4f}")
         c3.metric("Recall", f"{base_metrics['recall']:.4f}")
         c4.metric("F1-score", f"{base_metrics['f1']:.4f}")
-        c5.metric("ROC AUC", f"{base_metrics.get('roc_auc', 0.0):.4f}")
 
         if CM_PATH.exists():
             cm_df = pd.read_csv(CM_PATH, index_col=0)
@@ -575,12 +583,11 @@ elif method == "lr_sent140_tfidf":
     st.markdown("### Tuned Logistic Regression model")
 
     if tuned_metrics is not None:
-        t1, t2, t3, t4, t5 = st.columns(5)
+        t1, t2, t3, t4 = st.columns(4)
         t1.metric("Accuracy", f"{tuned_metrics['accuracy']:.4f}")
         t2.metric("Precision", f"{tuned_metrics['precision']:.4f}")
         t3.metric("Recall", f"{tuned_metrics['recall']:.4f}")
         t4.metric("F1-score", f"{tuned_metrics['f1']:.4f}")
-        t5.metric("ROC AUC", f"{tuned_metrics.get('roc_auc', 0.0):.4f}")
 
         if CM_TUNED_PATH.exists():
             cm_tuned_df = pd.read_csv(CM_TUNED_PATH, index_col=0)
@@ -611,20 +618,18 @@ elif method == "lr_sent140_tfidf":
 
     if base_metrics is not None and tuned_metrics is not None:
         comparison_df = pd.DataFrame({
-            "Metric": ["Accuracy", "Precision", "Recall", "F1-score", "ROC AUC"],
+            "Metric": ["Accuracy", "Precision", "Recall", "F1-score"],
             "Initial model": [
                 base_metrics["accuracy"],
                 base_metrics["precision"],
                 base_metrics["recall"],
                 base_metrics["f1"],
-                base_metrics.get("roc_auc", 0.0),
             ],
             "Tuned model": [
                 tuned_metrics["accuracy"],
                 tuned_metrics["precision"],
                 tuned_metrics["recall"],
                 tuned_metrics["f1"],
-                tuned_metrics.get("roc_auc", 0.0),
             ]
         })
 
@@ -638,42 +643,93 @@ elif method == "lr_sent140_tfidf":
 
     st.markdown("---")
 
-    # -------------------------
-    # Separate experiment
-    # -------------------------
-    st.subheader("Additional experiment: Logistic Regression vs DistilBERT on Sentiment140")
+# -------------------------
+# Baseline LR vs DistilBERT
+# -------------------------
+st.subheader("Baseline Logistic Regression vs DistilBERT")
 
-    st.info(
-        "This is a separate offline experiment and should not be confused with the hyperparameter tuning section above. "
-        "Both methods were evaluated on the same sampled subset of 10,000 instances from Sentiment140, "
-        "using the same 80% / 20% train-test split."
-    )
+st.info(
+    "This section compares the baseline (untuned) Logistic Regression model with DistilBERT "
+    "on the same labeled Reddit comments sample. The results are based on real offline runs."
+)
+
+lr_baseline_reddit_metrics = None
+distilbert_metrics = None
+
+if LR_BASELINE_REDDIT_METRICS_PATH.exists():
+    with open(LR_BASELINE_REDDIT_METRICS_PATH, "r", encoding="utf-8") as f:
+        lr_baseline_reddit_metrics = json.load(f)
+
+if DISTILBERT_REDDIT_METRICS_PATH.exists():
+    with open(DISTILBERT_REDDIT_METRICS_PATH, "r", encoding="utf-8") as f:
+        distilbert_metrics = json.load(f)
+
+if lr_baseline_reddit_metrics is not None and distilbert_metrics is not None:
+    baseline_acc = lr_baseline_reddit_metrics.get("accuracy", 0.0)
+    baseline_precision = lr_baseline_reddit_metrics.get("precision", 0.0)
+    baseline_recall = lr_baseline_reddit_metrics.get("recall", 0.0)
+    baseline_f1 = lr_baseline_reddit_metrics.get("f1", 0.0)
+
+    distil_acc = distilbert_metrics.get("accuracy", 0.0)
+    distil_precision = distilbert_metrics.get("precision", 0.0)
+    distil_recall = distilbert_metrics.get("recall", 0.0)
+    distil_f1 = distilbert_metrics.get("f1", 0.0)
 
     experiment_df = pd.DataFrame({
-        "Metric": ["Accuracy", "Precision", "Recall", "F1-score", "ROC AUC"],
-        "TF-IDF + Logistic Regression": [0.7653, 0.7631, 0.7734, 0.7682, 0.8463],
-        "DistilBERT": [0.8075, 0.8178, 0.7908, 0.8041, 0.8892],
-        "Improvement (%)": ["+5.52%", "+7.17%", "+2.25%", "+4.67%", "+5.06%"]
+        "Metric": ["Accuracy", "Precision", "Recall", "F1-score"],
+        "Baseline Logistic Regression": [
+            baseline_acc,
+            baseline_precision,
+            baseline_recall,
+            baseline_f1,
+        ],
+        "DistilBERT": [
+            distil_acc,
+            distil_precision,
+            distil_recall,
+            distil_f1,
+        ],
+        "Improvement (%)": [
+            pct_improvement(distil_acc, baseline_acc),
+            pct_improvement(distil_precision, baseline_precision),
+            pct_improvement(distil_recall, baseline_recall),
+            pct_improvement(distil_f1, baseline_f1),
+        ]
     })
-
-    st.markdown("### Experimental setup")
-    st.write(
-        "- Same sampled subset: 10,000 instances from Sentiment140\n"
-        "- Same train/test split: 80% training / 20% testing\n"
-        "- Same evaluation setting for both models"
-    )
 
     st.markdown("### Comparison results")
     st.dataframe(experiment_df, use_container_width=True)
 
     st.markdown("### Interpretation")
-    st.success(
-        "In this separate experiment, DistilBERT achieved better results on all reported metrics than "
-        "TF-IDF + Logistic Regression. However, this section is distinct from the Logistic Regression "
-        "hyperparameter tuning process presented above."
-    )
+    delta_f1 = distil_f1 - baseline_f1
+
+    if delta_f1 > 0:
+        st.success(
+            f"DistilBERT outperformed the baseline Logistic Regression model on the labeled Reddit comments sample. "
+            f"Compared with the untuned TF-IDF + Logistic Regression baseline, DistilBERT improved "
+            f"Accuracy by {pct_improvement(distil_acc, baseline_acc)}, "
+            f"Precision by {pct_improvement(distil_precision, baseline_precision)}, "
+            f"Recall by {pct_improvement(distil_recall, baseline_recall)}, and "
+            f"F1-score by {pct_improvement(distil_f1, baseline_f1)}. "
+            f"Overall, this suggests that DistilBERT captured contextual information better on the real labeled Reddit sample."
+        )
+    elif delta_f1 < 0:
+        st.warning(
+            f"DistilBERT did not outperform the baseline Logistic Regression model on this Reddit sample. "
+            f"The F1-score changed by {delta_f1:.4f}, which suggests that the baseline remained stronger."
+        )
+    else:
+        st.info(
+            "DistilBERT and the baseline Logistic Regression model achieved very similar results "
+            "on the labeled Reddit comments sample."
+        )
 
     st.caption(
-        "Important: this comparison refers only to the Sentiment140 offline experiment on a fixed 10,000-instance sample, "
-        "not to the Reddit posts analyzed in the dashboard above."
+        "Important: this comparison is based on the same labeled Reddit comments sample "
+        "and is separate from the Logistic Regression hyperparameter tuning section above."
+    )
+else:
+    st.info(
+        "This section cannot be displayed yet. Make sure lr_baseline_reddit_metrics.json "
+        "and distilbert_reddit_metrics.json are available in the evaluation folder."
     )
