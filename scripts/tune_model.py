@@ -44,8 +44,8 @@ def load_train_test_data():
     ]
     if missing:
         raise FileNotFoundError(
-            f"Lipsesc fișierele necesare pentru tuning: {', '.join(missing)}. "
-            f"Rulează mai întâi scriptul care salvează split-ul train/test."
+            f"Lipsesc fisierele necesare pentru tuning: {', '.join(missing)}. "
+            f"Ruleaza mai intai scriptul care salveaza split-ul train/test."
         )
 
     X_train = pd.read_pickle(X_TRAIN_PATH)
@@ -80,7 +80,7 @@ def save_json(path: Path, data: dict):
 
 
 def main():
-    print("Încărcare train/test split...")
+    print("Incărcare train/test split...")
     X_train, X_test, y_train, y_test = load_train_test_data()
 
     print(f"Train size: {len(X_train)}")

@@ -12,7 +12,7 @@ load_dotenv()
 
 PG_DSN = os.getenv("PG_DSN")
 if not PG_DSN:
-    st.error("PG_DSN lipsește. Setează-l în Streamlit Cloud → Settings → Secrets.")
+    st.error("PG_DSN lipsește. Seteazs-l în Streamlit Cloud → Settings → Secrets")
     st.stop()
 
 st.set_page_config(page_title="Reputation Dashboard", layout="wide")
@@ -316,8 +316,6 @@ method = METHODS[method_name]
 
 limit_rows = st.sidebar.slider("Rows in disagreements table", 20, 500, 100, 20)
 
-st.sidebar.markdown("---")
-st.sidebar.caption("Tip: dacă nu vezi date, verifică view-urile în schema reputation.")
 
 # -----------------------------
 # Reload logic
@@ -335,7 +333,7 @@ if need_reload:
             WHERE method = %s
         """, params=(method,))
     except Exception:
-        st.error("Nu găsesc view-ul reputation.v_company_sentiment_summary. Creează-l în DB (schema reputation).")
+        st.error("Nu gasesc view-ul reputation.v_company_sentiment_summary")
         st.stop()
 
     try:
@@ -344,7 +342,7 @@ if need_reload:
             FROM reputation.v_company_method_disagreement
         """)
     except Exception:
-        st.error("Nu găsesc view-ul reputation.v_company_method_disagreement.")
+        st.error("Nu gasesc view-ul reputation.v_company_method_disagreement.")
         st.stop()
 
     try:
@@ -353,7 +351,7 @@ if need_reload:
             FROM reputation.v_sentiment_disagreements
         """)
     except Exception:
-        st.error("Nu găsesc view-ul reputation.v_sentiment_disagreements.")
+        st.error("Nu gasesc view-ul reputation.v_sentiment_disagreements.")
         st.stop()
 
     st.session_state.summary = summary
@@ -387,7 +385,7 @@ if company != "All":
 # -----------------------------
 # Header
 # -----------------------------
-st.title("📊 Reputation & Sentiment Dashboard")
+st.title("Reputation & Sentiment Dashboard")
 st.subheader(f"Method: {method_name}")
 
 # -----------------------------
@@ -486,7 +484,7 @@ if not disagree_company.empty:
     disagree_company = disagree_company.sort_values(sort_col, ascending=False)
     st.dataframe(disagree_company, use_container_width=True)
 else:
-    st.info("Nu există date despre disagreement pentru filtrul selectat.")
+    st.info("Nu exista date despre disagreement pentru filtrul selectat.")
 
 # -----------------------------
 # Disagreements list
@@ -506,7 +504,7 @@ if not disagreements.empty:
     ).head(limit_rows)
     st.dataframe(disagreements, use_container_width=True)
 else:
-    st.info("Nu există postări în care LR și VADER să difere pentru filtrul selectat.")
+    st.info("Nu exista postări în care LR și VADER să difere pentru filtrul selectat.")
 
 # -----------------------------
 # Model evaluation

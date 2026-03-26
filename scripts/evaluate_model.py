@@ -34,7 +34,7 @@ def load_sentiment140():
     )
 
     if df.shape[1] < 6:
-        raise ValueError("Fișierul Sentiment140 nu are formatul așteptat.")
+        raise ValueError("Fisierul Sentiment140 nu are formatul asteptat.")
 
     df = df[[0, 5]].copy()
     df.columns = ["target", "text"]

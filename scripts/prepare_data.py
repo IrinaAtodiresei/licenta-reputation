@@ -37,7 +37,7 @@ def main():
         stratify=y
     )
 
-    # 🔥 SALVARE COMPLETĂ
+    # SALVARE COMPLETĂ
     X_train.to_pickle(EVAL_DIR / "X_train.pkl")
     X_test.to_pickle(EVAL_DIR / "X_test.pkl")
     y_train.to_pickle(EVAL_DIR / "y_train.pkl")

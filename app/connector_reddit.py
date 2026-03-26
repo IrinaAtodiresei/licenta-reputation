@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from datetime import datetime, timezone
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-import psycopg  # ✅ psycopg v3
+import psycopg
 
 
 # ------------------------------------------------------------
@@ -45,7 +45,7 @@ HEADERS = {
 }
 
 # ------------------------------------------------------------
-# COMPANIES (din DB-ul tău)
+# COMPANIES (din DB)
 # ------------------------------------------------------------
 COMPANY_ID = {"apple": 1, "samsung": 2, "google": 3}
 
@@ -95,15 +95,12 @@ METHOD_VADER = "vader"
 
 
 def ensure_tables_exist(cur):
-    """
-    Dacă ai rulat schema deja, asta nu face nimic.
-    Dacă lipsește ceva (ex: reputation.source), îți dă eroare clară.
-    """
+
     # minim sanity check: schema reputation
     cur.execute("SELECT to_regnamespace('reputation') IS NOT NULL;")
     ok = cur.fetchone()[0]
     if not ok:
-        raise RuntimeError("Schema 'reputation' nu există în DB. Trebuie restore/migrate întâi.")
+        raise RuntimeError("Schema 'reputation' nu exista în DB. Trebuie restore/migrate intai.")
 
 
 def main():
@@ -179,7 +176,7 @@ def main():
 
                 company_id = detect_company_id(combined)
 
-                # INSERT mention (sau select dacă exista)
+
                 cur.execute("""
                     INSERT INTO reputation.mention(
                         company_id,
@@ -280,12 +277,12 @@ def main():
             time.sleep(1)
 
         except Exception as e:
-            print(f"⚠️ Eroare la {sub}: {e}")
+            print(f" Eroare la {sub}: {e}")
 
-    print(f"✅ Mențiuni NOI salvate în DB: {mentions_new}")
-    print(f"✅ Sentiment LR rows inserate: {sent_lr_rows_inserted}")
-    print(f"✅ Sentiment VADER rows inserate: {sent_vader_rows_inserted}")
-    print(f"🏷️ Mențiuni cu company_id detectat (în acest run): {mentions_labeled_company}")
+    print(f" Mentiuni NOI salvate in DB: {mentions_new}")
+    print(f" Sentiment LR rows inserate: {sent_lr_rows_inserted}")
+    print(f" Sentiment VADER rows inserate: {sent_vader_rows_inserted}")
+    print(f" Mentiuni cu company_id detectat (in acest run): {mentions_labeled_company}")
 
     # ------------------------------------------------------------
     # UPDATE job_run
@@ -305,7 +302,7 @@ def main():
     }), job_run_id))
 
     conn.close()
-    print("🔒 Conexiunea la baza de date a fost închisă.")
+    print(" Conexiunea la baza de date a fost inchisa.")
 
 
 if __name__ == "__main__":

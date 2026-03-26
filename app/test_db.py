@@ -7,6 +7,6 @@ dsn = os.getenv("PG_DSN")
 
 try:
     conn = psycopg2.connect(dsn)
-    print("✅ Conexiune reușită la baza de date!")
+    print("Conexiune reușită la baza de date!")
 except Exception as e:
-    print("❌ Eroare:", e)
+    print("Eroare:", e)
