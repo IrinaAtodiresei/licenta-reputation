@@ -102,7 +102,8 @@ def main():
 
     grid.fit(X_train, y_train)
 
-    print("Tuning finalizat.")
+    print("Tuning finalizat."
+          "")
     print("Best params:", grid.best_params_)
     print("Best CV F1:", grid.best_score_)
 

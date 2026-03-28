@@ -81,7 +81,7 @@ def main():
     joblib.dump(model, "../models/sentiment_lr_sent140.joblib")
     joblib.dump(vectorizer, "../models/tfidf_sent140.joblib")
 
-    print("DONE ✅ Files saved:")
+    print("DONE Files saved:")
     print("- sentiment_lr_sent140.joblib")
     print("- tfidf_sent140.joblib")
 

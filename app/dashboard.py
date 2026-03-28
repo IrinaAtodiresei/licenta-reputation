@@ -228,8 +228,8 @@ def generate_tuned_model_interpretation(metrics, best_params):
     )
 
     explanation_text = (
-        "This indicates that hyperparameter tuning helped identify a more suitable configuration "
-        "for the TF-IDF representation and Logistic Regression classifier."
+        "The tuning process identified the best configuration within the tested parameter grid, "
+        "although it did not improve performance on the test set."
     )
 
     return performance_text + " " + metrics_text + config_text + explanation_text
