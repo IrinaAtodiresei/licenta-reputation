@@ -119,16 +119,26 @@ METHOD_VADER = "vader"
 
 def detect_company_id(text: str):
     text = text.lower()
-    hits = []
+
+    company_scores = {}
 
     for company, keywords in COMPANY_MAP.items():
-        if any(keyword in text for keyword in keywords):
-            hits.append(company)
+        score = 0
 
-    if not hits:
+        for keyword in keywords:
+            if keyword in text:
+                score += 1
+
+        if score > 0:
+            company_scores[company] = score
+
+    if not company_scores:
         return None
 
-    return COMPANY_ID[hits[0]]
+    # Alege compania cu cele mai multe potriviri de keywords
+    best_company = max(company_scores, key=company_scores.get)
+
+    return COMPANY_ID[best_company]
 
 
 def text_is_relevant(text: str):
