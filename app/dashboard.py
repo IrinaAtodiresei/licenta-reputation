@@ -624,6 +624,12 @@ else:
 # ------------------------------------------------------------
 st.markdown("### Mentions by company")
 
+st.caption(
+    "Note: Differences in mention volume reflect the frequency of Reddit discussions captured from the selected "
+    "subreddits and keywords. A higher number of mentions does not necessarily indicate higher overall popularity "
+    "or better reputation."
+)
+
 if not summary.empty and "company_name" in summary.columns and "mentions" in summary.columns:
     mentions_chart = summary[["company_name", "mentions"]].sort_values("mentions", ascending=True)
     st.bar_chart(mentions_chart.set_index("company_name"))
