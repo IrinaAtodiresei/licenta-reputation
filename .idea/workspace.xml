@@ -5,9 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5e144aed-1f1e-4264-bf5c-2969611e1c6d" name="Changes" comment="Added DistilBERT vs Logistic Regression comparison on labeled Reddit sample">
+      <change afterPath="$PROJECT_DIR$/scripts/apply_deep_learning_sentiment.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/X_test.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/X_test.pkl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/y_test.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/y_test.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/connector_reddit_extended.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/connector_reddit_extended.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/dashboard.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/app/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/distilbert_reddit_metrics.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/evaluation/lr_baseline_reddit_metrics.json" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,21 +54,21 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.connector_reddit.executor&quot;: &quot;Run&quot;,
-    &quot;Python.dashboard.executor&quot;: &quot;Run&quot;,
-    &quot;Python.evaluate_model.executor&quot;: &quot;Run&quot;,
-    &quot;Python.prepare_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_db.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_model.executor&quot;: &quot;Run&quot;,
-    &quot;Python.train_sentiment140.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;feature/reddit-distilbert-comparison&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.connector_reddit.executor": "Run",
+    "Python.dashboard.executor": "Run",
+    "Python.evaluate_model.executor": "Run",
+    "Python.prepare_data.executor": "Run",
+    "Python.test_db.executor": "Run",
+    "Python.test_model.executor": "Run",
+    "Python.train_sentiment140.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "feature/deep-learning-method",
+    "settings.editor.selected.configurable": "preferences.lookFeel"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Irina\Anul3\SEM2\LICENTA\models" />
