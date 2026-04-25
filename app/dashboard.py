@@ -486,6 +486,14 @@ if company != "All":
 st.title("Reputation & Sentiment Dashboard")
 st.subheader(f"Method: {method_name}")
 
+st.markdown("### Data collection summary")
+st.info(
+    "The dataset contains Reddit posts and comments collected through the Reddit public JSON API. "
+    "The collection process used selected technology-related subreddits, keyword filtering, pagination, "
+    "search endpoints, pagination, and comment extraction. "
+    "The collected mentions are stored in a PostgreSQL database and analyzed using three sentiment analysis methods."
+)
+
 
 # ------------------------------------------------------------
 # KPI BOXES
@@ -533,7 +541,35 @@ if method == "deep_learning_transformer":
 else:
     col4.metric("% Disagreement LR vs VADER", f"{pct_diff:.2f}%")
 
+st.caption(
+    "Note: Avg score has different meanings depending on the selected method: "
+    "for Logistic Regression and Deep Learning it represents model confidence/probability, "
+    "while for VADER it represents the compound sentiment score."
+)
+
 st.caption("The dashboard uses the data currently stored in the PostgreSQL database.")
+
+st.markdown("### Sentiment distribution by method")
+
+method_distribution = safe_read_df("""
+    SELECT
+        method,
+        SUM(CASE WHEN label = 'positive' THEN 1 ELSE 0 END) AS positive,
+        SUM(CASE WHEN label = 'neutral' THEN 1 ELSE 0 END) AS neutral,
+        SUM(CASE WHEN label = 'negative' THEN 1 ELSE 0 END) AS negative,
+        COUNT(*) AS total
+    FROM reputation.sentiment_result
+    GROUP BY method
+    ORDER BY method;
+""")
+
+if not method_distribution.empty:
+    st.dataframe(method_distribution, use_container_width=True)
+
+    chart_df = method_distribution.set_index("method")[["positive", "neutral", "negative"]]
+    st.bar_chart(chart_df)
+else:
+    st.info("Nu există date suficiente pentru distribuția sentimentului pe metode.")
 
 st.markdown("### Extra overview")
 
@@ -689,7 +725,12 @@ else:
 st.markdown("---")
 st.subheader("Most negative mentions")
 
-negative_examples = safe_read_df("""
+if method == "deep_learning_transformer":
+    order_direction = "DESC"
+else:
+    order_direction = "ASC"
+
+negative_examples = safe_read_df(f"""
     SELECT
         m.mention_id,
         c.name AS company_name,
@@ -704,7 +745,7 @@ negative_examples = safe_read_df("""
     JOIN reputation.sentiment_result s ON m.mention_id = s.mention_id
     WHERE s.method = %s
       AND s.label = 'negative'
-    ORDER BY s.score ASC
+    ORDER BY s.score {order_direction}
     LIMIT 30;
 """, params=(method,))
 
