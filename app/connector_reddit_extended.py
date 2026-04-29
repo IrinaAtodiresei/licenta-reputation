@@ -95,25 +95,22 @@ SLEEP_BETWEEN_REQUESTS = 1.5
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MODEL_PATH = BASE_DIR / "models" / "sentiment_lr_sent140.joblib"
-TFIDF_PATH = BASE_DIR / "models" / "tfidf_sent140.joblib"
+MODEL_PATH = BASE_DIR / "models" / "lr_3class_balanced.joblib"
+
 
 print("Incarc modelul Logistic Regression si TF-IDF...", flush=True)
 
 if not MODEL_PATH.exists():
     raise FileNotFoundError(f"Nu găsesc modelul: {MODEL_PATH}")
 
-if not TFIDF_PATH.exists():
-    raise FileNotFoundError(f"Nu găsesc TF-IDF-ul: {TFIDF_PATH}")
 
 model = joblib.load(MODEL_PATH)
-tfidf = joblib.load(TFIDF_PATH)
 
 print("Modelul si TF-IDF-ul au fost incarcate.", flush=True)
 
 analyzer = SentimentIntensityAnalyzer()
 
-METHOD_LR = "lr_sent140_tfidf"
+METHOD_LR = "lr_3class_balanced"
 METHOD_VADER = "vader"
 
 
@@ -191,11 +188,10 @@ def create_job_run(cur, source_id):
 
 
 def classify_and_save_sentiment(cur, mention_id, text):
-    X = tfidf.transform([text])
+    lr_label = model.predict([text])[0]
 
-    pred = int(model.predict(X)[0])
-    proba_pos = float(model.predict_proba(X)[0][1])
-    lr_label = "positive" if pred == 1 else "negative"
+    proba = model.predict_proba([text])[0]
+    max_proba = float(proba.max())
 
     cur.execute("""
         INSERT INTO reputation.sentiment_result(
@@ -207,7 +203,7 @@ def classify_and_save_sentiment(cur, mention_id, text):
         )
         VALUES (%s, %s, %s, %s, now())
         ON CONFLICT (mention_id, method) DO NOTHING;
-    """, (mention_id, METHOD_LR, lr_label, proba_pos))
+    """, (mention_id, METHOD_LR, lr_label, max_proba))
 
     lr_inserted = 1 if cur.rowcount == 1 else 0
 
