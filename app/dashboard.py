@@ -28,6 +28,11 @@ LR_METRICS_PATH = EVAL_DIR / "lr_3class_metrics.json"
 LR_CM_PATH = EVAL_DIR / "lr_3class_confusion_matrix.csv"
 LR_REPORT_PATH = EVAL_DIR / "lr_3class_classification_report.csv"
 
+MANUAL_SAMPLE_PATH = EVAL_DIR / "reddit_manual_validation_sample.csv"
+MANUAL_METRICS_PATH = EVAL_DIR / "reddit_manual_validation_metrics.json"
+MANUAL_REPORT_PATH = EVAL_DIR / "reddit_manual_validation_report.csv"
+MANUAL_CM_PATH = EVAL_DIR / "reddit_manual_validation_confusion_matrix.csv"
+
 
 # ------------------------------------------------------------
 # DB HELPERS
@@ -253,6 +258,19 @@ def plot_normalized_confusion_matrix(cm_df: pd.DataFrame, title="Normalized Conf
 
     plt.tight_layout()
     return fig
+
+def get_manual_cm_for_method(cm_path: Path, method: str):
+    if not cm_path.exists():
+        return pd.DataFrame()
+
+    cm_all = pd.read_csv(cm_path, index_col=0)
+
+    if "method" not in cm_all.columns:
+        return pd.DataFrame()
+
+    cm_method = cm_all[cm_all["method"] == method].drop(columns=["method"])
+
+    return cm_method
 
 # ------------------------------------------------------------
 # METHODS
@@ -778,3 +796,145 @@ elif method == "deep_learning_transformer":
         "In this application, it was not trained from scratch and was not hyperparameter-tuned locally. "
         "Therefore, local training metrics and confusion matrices are not shown for this method."
     )
+
+# ------------------------------------------------------------
+# MANUAL REDDIT VALIDATION
+# ------------------------------------------------------------
+st.markdown("---")
+st.subheader("Manual Reddit validation")
+
+st.info(
+    "This section evaluates the selected sentiment analysis method on a manually labeled Reddit sample. "
+    "The manual labels are used as ground truth, while the model predictions are compared against them."
+)
+
+if not MANUAL_METRICS_PATH.exists() or not MANUAL_SAMPLE_PATH.exists():
+    st.warning(
+        "Manual validation files are not available yet. "
+        "Export a Reddit sample, label the manual_label column, then run the manual evaluation script."
+    )
+else:
+    with open(MANUAL_METRICS_PATH, "r", encoding="utf-8") as f:
+        manual_metrics = json.load(f)
+
+    if method not in manual_metrics:
+        st.warning("Nu exista metrici manuale pentru metoda selectata.")
+    else:
+        selected_manual_metrics = manual_metrics[method]
+
+        st.markdown(f"### Manual validation results: {method_name}")
+
+        mv1, mv2, mv3, mv4 = st.columns(4)
+
+        mv1.metric("Manual sample size", format_thousands_dot(selected_manual_metrics.get("sample_size", 0)))
+        mv2.metric("Accuracy", f"{selected_manual_metrics.get('accuracy', 0):.4f}")
+        mv3.metric("Precision macro", f"{selected_manual_metrics.get('precision_macro', 0):.4f}")
+        mv4.metric("F1 macro", f"{selected_manual_metrics.get('f1_macro', 0):.4f}")
+
+        mv5, mv6, mv7 = st.columns(3)
+
+        mv5.metric("Recall macro", f"{selected_manual_metrics.get('recall_macro', 0):.4f}")
+        mv6.metric("F1 weighted", f"{selected_manual_metrics.get('f1_weighted', 0):.4f}")
+        mv7.metric("Accuracy on Reddit", f"{selected_manual_metrics.get('accuracy', 0) * 100:.2f}%")
+
+        st.caption(
+            "Unlike the previous training evaluation, these metrics are computed directly on Reddit mentions "
+            "that were manually labeled by the author of the project."
+        )
+
+        manual_cm_df = get_manual_cm_for_method(MANUAL_CM_PATH, method)
+
+        if not manual_cm_df.empty:
+            st.markdown("### Manual validation confusion matrices")
+
+            cm_left, cm_right = st.columns(2)
+
+            with cm_left:
+                st.markdown("#### Raw confusion matrix")
+                fig_manual_raw = plot_confusion_matrix_heatmap(
+                    manual_cm_df,
+                    title="Manual Reddit Validation - Raw"
+                )
+                st.pyplot(fig_manual_raw, use_container_width=False)
+
+            with cm_right:
+                st.markdown("#### Normalized confusion matrix")
+                fig_manual_norm = plot_normalized_confusion_matrix(
+                    manual_cm_df,
+                    title="Manual Reddit Validation - Normalized (%)"
+                )
+                st.pyplot(fig_manual_norm, use_container_width=False)
+
+        if MANUAL_REPORT_PATH.exists():
+            manual_report_df = pd.read_csv(MANUAL_REPORT_PATH)
+
+            if "method" in manual_report_df.columns:
+                manual_report_df = manual_report_df[manual_report_df["method"] == method]
+
+            st.markdown("### Manual validation classification report")
+            st.dataframe(manual_report_df, use_container_width=True)
+
+        manual_df = pd.read_csv(MANUAL_SAMPLE_PATH)
+
+        if company != "All" and "company_name" in manual_df.columns:
+            manual_df = manual_df[manual_df["company_name"] == company]
+
+        pred_col_map = {
+            "lr_3class_balanced": "lr_label",
+            "vader": "vader_label",
+            "deep_learning_transformer": "dl_label",
+        }
+
+        selected_pred_col = pred_col_map.get(method)
+
+        if selected_pred_col and selected_pred_col in manual_df.columns:
+            manual_df["is_correct"] = manual_df["manual_label"] == manual_df[selected_pred_col]
+
+            display_cols = [
+                "mention_id",
+                "company_name",
+                "text",
+                "manual_label",
+                selected_pred_col,
+                "is_correct",
+            ]
+
+            existing_display_cols = [col for col in display_cols if col in manual_df.columns]
+
+            st.markdown("### Manually labeled Reddit examples")
+            st.dataframe(
+                manual_df[existing_display_cols].head(50),
+                use_container_width=True
+            )
+
+            st.download_button(
+                label="⬇ Download manual validation sample",
+                data=manual_df.to_csv(index=False).encode("utf-8-sig"),
+                file_name=f"manual_validation_{method}.csv",
+                mime="text/csv",
+            )
+
+        st.markdown("### Manual validation interpretation")
+
+        acc = selected_manual_metrics.get("accuracy", 0)
+        f1 = selected_manual_metrics.get("f1_macro", 0)
+
+        if acc >= 0.75:
+            manual_text = (
+                f"The selected method performs well on the manually labeled Reddit sample, "
+                f"with an accuracy of {acc:.4f} and a macro F1-score of {f1:.4f}."
+            )
+        elif acc >= 0.60:
+            manual_text = (
+                f"The selected method has moderate performance on the manually labeled Reddit sample, "
+                f"with an accuracy of {acc:.4f}. This suggests that Reddit language is more difficult "
+                f"than the original training data."
+            )
+        else:
+            manual_text = (
+                f"The selected method has limited performance on the manually labeled Reddit sample, "
+                f"with an accuracy of {acc:.4f}. This shows that model predictions should be interpreted carefully "
+                f"when applied to informal Reddit discussions."
+            )
+
+        st.info(manual_text)

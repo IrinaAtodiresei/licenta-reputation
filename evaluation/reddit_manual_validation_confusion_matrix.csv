@@ -1,0 +1,10 @@
+,method,Predicted negative,Predicted neutral,Predicted positive
+Actual negative,lr_3class_balanced,96,54,11
+Actual neutral,lr_3class_balanced,72,122,48
+Actual positive,lr_3class_balanced,29,41,21
+Actual negative,vader,77,24,60
+Actual neutral,vader,33,87,122
+Actual positive,vader,11,12,68
+Actual negative,deep_learning_transformer,94,57,10
+Actual neutral,deep_learning_transformer,20,163,59
+Actual positive,deep_learning_transformer,1,35,55
