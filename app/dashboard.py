@@ -381,10 +381,6 @@ method = METHODS[method_name]
 
 limit_rows = st.sidebar.slider("Rows in disagreement table", 20, 500, 100, 20)
 
-if st.sidebar.button("Reload data"):
-    st.session_state.loaded = False
-    st.rerun()
-
 
 # ------------------------------------------------------------
 # LOAD DATA
