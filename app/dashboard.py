@@ -1542,10 +1542,32 @@ with tab_source:
             "content",
         ]
 
+        source_df["reddit_link"] = source_df["reddit_url"].apply(
+            lambda url: f"[Open]({url})" if pd.notna(url) else ""
+        )
+
+        display_cols = [
+            "mention_id",
+            "company_name",
+            "reddit_object_type",
+            "reddit_object_id",
+            "author",
+            "published_at",
+            "title",
+            "content",
+            "reddit_link"
+        ]
+
         st.dataframe(
             source_df[display_cols],
             use_container_width=True,
-            hide_index=True
+            hide_index=True,
+            column_config={
+                "reddit_link": st.column_config.LinkColumn(
+                    "Source",
+                    display_text="🔗 Open"
+                )
+            }
         )
 
         st.markdown("---")
