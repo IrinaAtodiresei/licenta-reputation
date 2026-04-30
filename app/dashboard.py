@@ -1534,40 +1534,16 @@ with tab_source:
             "company_name",
             "reddit_object_type",
             "reddit_object_id",
-            "external_id",
-            "author",
-            "published_at",
-            "collected_at",
-            "title",
-            "content",
-        ]
-
-        source_df["reddit_link"] = source_df["reddit_url"].apply(
-            lambda url: f"[Open]({url})" if pd.notna(url) else ""
-        )
-
-        display_cols = [
-            "mention_id",
-            "company_name",
-            "reddit_object_type",
-            "reddit_object_id",
             "author",
             "published_at",
             "title",
-            "content",
-            "reddit_link"
+            "content"
         ]
 
         st.dataframe(
             source_df[display_cols],
             use_container_width=True,
-            hide_index=True,
-            column_config={
-                "reddit_link": st.column_config.LinkColumn(
-                    "Source",
-                    display_text="🔗 Open"
-                )
-            }
+            hide_index=True
         )
 
         st.markdown("---")
@@ -1597,13 +1573,6 @@ with tab_source:
         if pd.notna(selected_row.get("comment_id")):
             st.write(f"**Comment ID:** `{selected_row.get('comment_id', '')}`")
 
-        if pd.notna(selected_row.get("reddit_url")) and str(selected_row.get("reddit_url")).strip():
-            st.link_button("Open original Reddit source", selected_row["reddit_url"])
-        else:
-            st.warning(
-                "This older row does not contain a direct Reddit URL because the URL metadata field "
-                "was added after the original collection."
-            )
 
         st.markdown("#### Title")
         st.write(selected_row.get("title", ""))
