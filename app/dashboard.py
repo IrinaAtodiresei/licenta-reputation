@@ -64,6 +64,43 @@ def safe_read_df(sql: str, params=None) -> pd.DataFrame:
 def format_thousands_dot(value):
     return f"{int(value):,}".replace(",", ".")
 
+def render_metrics_grid(metrics, columns=4):
+    cols = st.columns(columns)
+
+    for index, metric in enumerate(metrics):
+        col = cols[index % columns]
+
+        with col:
+            st.markdown(
+                f"""
+                <div style="
+                    padding: 16px 18px;
+                    margin-bottom: 16px;
+                    border-radius: 14px;
+                    background-color: #f8fafc;
+                    border: 1px solid #e5e7eb;
+                    min-height: 105px;
+                ">
+                    <div style="
+                        font-size: 0.85rem;
+                        color: #6b7280;
+                        margin-bottom: 8px;
+                    ">
+                        {metric["label"]}
+                    </div>
+                    <div style="
+                        font-size: 2rem;
+                        font-weight: 600;
+                        color: #111827;
+                        line-height: 1.1;
+                    ">
+                        {metric["value"]}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
 @st.cache_resource
 def load_lr_model():
     return joblib.load(LR_MODEL_PATH)
@@ -1022,17 +1059,17 @@ with tab_dashboard:
 
             st.markdown("### Logistic Regression 3-class balanced metrics")
 
-            c1, c2, c3, c4 = st.columns(4)
+            lr_metric_cards = [
+                {"label": "Accuracy", "value": f"{lr_metrics.get('accuracy', 0):.4f}"},
+                {"label": "Precision macro", "value": f"{lr_metrics.get('precision_macro', 0):.4f}"},
+                {"label": "Recall macro", "value": f"{lr_metrics.get('recall_macro', 0):.4f}"},
+                {"label": "F1 macro", "value": f"{lr_metrics.get('f1_macro', 0):.4f}"},
+                {"label": "Precision weighted", "value": f"{lr_metrics.get('precision_weighted', 0):.4f}"},
+                {"label": "Recall weighted", "value": f"{lr_metrics.get('recall_weighted', 0):.4f}"},
+                {"label": "F1 weighted", "value": f"{lr_metrics.get('f1_weighted', 0):.4f}"},
+            ]
 
-            c1.metric("Accuracy", f"{lr_metrics.get('accuracy', 0):.4f}")
-            c2.metric("Precision macro", f"{lr_metrics.get('precision_macro', 0):.4f}")
-            c3.metric("Recall macro", f"{lr_metrics.get('recall_macro', 0):.4f}")
-            c4.metric("F1 macro", f"{lr_metrics.get('f1_macro', 0):.4f}")
-
-            c5, c6, c7 = st.columns(3)
-            c5.metric("Precision weighted", f"{lr_metrics.get('precision_weighted', 0):.4f}")
-            c6.metric("Recall weighted", f"{lr_metrics.get('recall_weighted', 0):.4f}")
-            c7.metric("F1 weighted", f"{lr_metrics.get('f1_weighted', 0):.4f}")
+            render_metrics_grid(lr_metric_cards, columns=4)
 
         else:
             st.warning("Nu gasesc fisierul evaluation/lr_3class_metrics.json.")
@@ -1111,38 +1148,39 @@ with tab_dashboard:
 
             st.markdown(f"### Manual validation results: {method_name}")
 
-            manual_metrics_df = pd.DataFrame([
+            manual_metric_cards = [
                 {
-                    "Metric": "Manual sample size",
-                    "Value": format_thousands_dot(selected_manual_metrics.get("sample_size", 0))
+                    "label": "Manual sample size",
+                    "value": format_thousands_dot(selected_manual_metrics.get("sample_size", 0))
                 },
                 {
-                    "Metric": "Accuracy",
-                    "Value": f"{selected_manual_metrics.get('accuracy', 0):.4f}"
+                    "label": "Accuracy",
+                    "value": f"{selected_manual_metrics.get('accuracy', 0):.4f}"
                 },
                 {
-                    "Metric": "Precision macro",
-                    "Value": f"{selected_manual_metrics.get('precision_macro', 0):.4f}"
+                    "label": "Precision macro",
+                    "value": f"{selected_manual_metrics.get('precision_macro', 0):.4f}"
                 },
                 {
-                    "Metric": "Recall macro",
-                    "Value": f"{selected_manual_metrics.get('recall_macro', 0):.4f}"
+                    "label": "Recall macro",
+                    "value": f"{selected_manual_metrics.get('recall_macro', 0):.4f}"
                 },
                 {
-                    "Metric": "F1 macro",
-                    "Value": f"{selected_manual_metrics.get('f1_macro', 0):.4f}"
+                    "label": "F1 macro",
+                    "value": f"{selected_manual_metrics.get('f1_macro', 0):.4f}"
                 },
                 {
-                    "Metric": "F1 weighted",
-                    "Value": f"{selected_manual_metrics.get('f1_weighted', 0):.4f}"
+                    "label": "F1 weighted",
+                    "value": f"{selected_manual_metrics.get('f1_weighted', 0):.4f}"
                 },
                 {
-                    "Metric": "Accuracy on Reddit",
-                    "Value": f"{selected_manual_metrics.get('accuracy', 0) * 100:.2f}%"
+                    "label": "Accuracy on Reddit",
+                    "value": f"{selected_manual_metrics.get('accuracy', 0) * 100:.2f}%"
                 },
-            ])
+            ]
 
-            st.dataframe(manual_metrics_df, use_container_width=True, hide_index=True)
+            render_metrics_grid(manual_metric_cards, columns=4)
+
 
             st.caption(
                 "Unlike the previous training evaluation, these metrics are computed directly on Reddit mentions "
