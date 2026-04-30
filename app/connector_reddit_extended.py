@@ -89,7 +89,6 @@ TOP_TIME_FILTERS = [
 ]
 
 
-# Pentru test rapid. După ce merge, poți crește la 5.
 MAX_PAGES_PER_ENDPOINT = 2
 LIMIT_PER_PAGE = 100
 
@@ -101,7 +100,6 @@ SLEEP_BETWEEN_REQUESTS = 1.5
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 MODEL_PATH = BASE_DIR / "models" / "lr_3class_balanced.joblib"
 
 
@@ -109,7 +107,6 @@ print("Incarc modelul Logistic Regression si TF-IDF...", flush=True)
 
 if not MODEL_PATH.exists():
     raise FileNotFoundError(f"Nu găsesc modelul: {MODEL_PATH}")
-
 
 model = joblib.load(MODEL_PATH)
 
@@ -123,7 +120,6 @@ METHOD_VADER = "vader"
 
 def detect_company_id(text: str):
     text = text.lower()
-
     matches = []
 
     for company, keywords in COMPANY_MAP.items():
@@ -153,6 +149,17 @@ def ensure_tables_exist(cur):
 
     if not ok:
         raise RuntimeError("Schema reputation nu există în DB.")
+
+
+def ensure_source_columns_exist(cur):
+    cur.execute("""
+        ALTER TABLE reputation.mention
+        ADD COLUMN IF NOT EXISTS subreddit TEXT,
+        ADD COLUMN IF NOT EXISTS post_id TEXT,
+        ADD COLUMN IF NOT EXISTS comment_id TEXT,
+        ADD COLUMN IF NOT EXISTS reddit_url TEXT,
+        ADD COLUMN IF NOT EXISTS raw_json JSONB;
+    """)
 
 
 def insert_source(cur):
@@ -193,7 +200,6 @@ def create_job_run(cur, source_id):
 
 def classify_and_save_sentiment(cur, mention_id, text):
     lr_label = model.predict([text])[0]
-
     proba = model.predict_proba([text])[0]
     max_proba = float(proba.max())
 
@@ -246,7 +252,12 @@ def save_mention_and_sentiment(
     title,
     content,
     author,
-    created_utc
+    created_utc,
+    subreddit=None,
+    post_id=None,
+    comment_id=None,
+    reddit_url=None,
+    raw_json=None
 ):
     title = title or ""
     content = content or ""
@@ -272,9 +283,6 @@ def save_mention_and_sentiment(
 
     company_id = detect_company_id(combined)
 
-    if company_id is None:
-        company_id = None
-
     try:
         published_at = datetime.fromtimestamp(float(created_utc), tz=timezone.utc)
     except Exception:
@@ -290,11 +298,21 @@ def save_mention_and_sentiment(
             author,
             published_at,
             collected_at,
-            job_run_id
+            job_run_id,
+            subreddit,
+            post_id,
+            comment_id,
+            reddit_url,
+            raw_json
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, now(), %s)
-        ON CONFLICT (source_id, external_id) DO NOTHING
-        RETURNING mention_id;
+        VALUES (%s, %s, %s, %s, %s, %s, %s, now(), %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (source_id, external_id) DO UPDATE
+        SET subreddit = COALESCE(EXCLUDED.subreddit, reputation.mention.subreddit),
+            post_id = COALESCE(EXCLUDED.post_id, reputation.mention.post_id),
+            comment_id = COALESCE(EXCLUDED.comment_id, reputation.mention.comment_id),
+            reddit_url = COALESCE(EXCLUDED.reddit_url, reputation.mention.reddit_url),
+            raw_json = COALESCE(EXCLUDED.raw_json, reputation.mention.raw_json)
+        RETURNING mention_id, xmax = 0 AS inserted;
     """, (
         company_id,
         source_id,
@@ -303,40 +321,26 @@ def save_mention_and_sentiment(
         content,
         author,
         published_at,
-        job_run_id
+        job_run_id,
+        subreddit,
+        post_id,
+        comment_id,
+        reddit_url,
+        json.dumps(raw_json) if raw_json is not None else None
     ))
 
     row = cur.fetchone()
-    new_mention = 0
 
-    if row:
-        mention_id = row[0]
-        new_mention = 1
-    else:
-        cur.execute("""
-            SELECT mention_id, company_id
-            FROM reputation.mention
-            WHERE source_id = %s AND external_id = %s;
-        """, (source_id, external_id))
+    if not row:
+        return {
+            "new_mention": 0,
+            "lr_inserted": 0,
+            "vader_inserted": 0,
+            "company_detected": 0
+        }
 
-        existing = cur.fetchone()
-
-        if not existing:
-            return {
-                "new_mention": 0,
-                "lr_inserted": 0,
-                "vader_inserted": 0,
-                "company_detected": 0
-            }
-
-        mention_id, existing_company_id = existing
-
-        if existing_company_id is None and company_id is not None:
-            cur.execute("""
-                UPDATE reputation.mention
-                SET company_id = %s
-                WHERE mention_id = %s;
-            """, (company_id, mention_id))
+    mention_id = row[0]
+    new_mention = 1 if row[1] else 0
 
     lr_inserted, vader_inserted = classify_and_save_sentiment(
         cur=cur,
@@ -514,6 +518,9 @@ def main():
     ensure_tables_exist(cur)
     print("Schema reputation exista.", flush=True)
 
+    ensure_source_columns_exist(cur)
+    print("Coloanele pentru proof of source exista.", flush=True)
+
     source_id = insert_source(cur)
     print(f"source_id = {source_id}", flush=True)
 
@@ -578,6 +585,9 @@ def main():
             author = post.get("author")
             created_utc = post.get("created_utc", 0)
 
+            post_permalink = post.get("permalink")
+            post_url = f"https://www.reddit.com{post_permalink}" if post_permalink else None
+
             result = save_mention_and_sentiment(
                 cur=cur,
                 source_id=source_id,
@@ -586,7 +596,12 @@ def main():
                 title=title,
                 content=content,
                 author=author,
-                created_utc=created_utc
+                created_utc=created_utc,
+                subreddit=subreddit,
+                post_id=post_id,
+                comment_id=None,
+                reddit_url=post_url,
+                raw_json=post
             )
             process_result(result, totals)
 
@@ -609,6 +624,9 @@ def main():
                         if not comment_id:
                             continue
 
+                        comment_permalink = comment.get("permalink")
+                        comment_url = f"https://www.reddit.com{comment_permalink}" if comment_permalink else None
+
                         comment_result = save_mention_and_sentiment(
                             cur=cur,
                             source_id=source_id,
@@ -617,7 +635,12 @@ def main():
                             title=title,
                             content=comment_body,
                             author=comment_author,
-                            created_utc=comment_created_utc
+                            created_utc=comment_created_utc,
+                            subreddit=subreddit,
+                            post_id=post_id,
+                            comment_id=comment_id,
+                            reddit_url=comment_url,
+                            raw_json=comment
                         )
                         process_result(comment_result, totals)
 

@@ -693,9 +693,10 @@ if company != "All":
 # ------------------------------------------------------------
 # HEADER
 # ------------------------------------------------------------
-tab_dashboard, tab_demo = st.tabs([
+tab_dashboard, tab_demo, tab_source = st.tabs([
     "Dashboard",
-    "Interactive model demo"
+    "Interactive model demo",
+    "Proof of source"
 ])
 
 # ===================== DASHBOARD TAB =====================
@@ -1439,3 +1440,168 @@ with tab_demo:
                 "Logistic Regression uses learned word weights, VADER uses lexicon sentiment scores, "
                 "and the Transformer interprets the full sentence context."
             )
+
+# ===================== PROOF OF SOURCE TAB =====================
+with tab_source:
+    st.title("Proof of source")
+
+    st.markdown("""
+    This section displays the Reddit mentions already stored in the database.
+
+    The table below shows the existing collected posts/comments, 50 rows at a time.
+    """)
+
+    st.info(
+        "These are existing records from the PostgreSQL database. "
+        "For older records, full Reddit metadata such as raw JSON or direct Reddit URL may not be available, "
+        "because those fields were added later."
+    )
+
+    rows_per_page = 50
+
+    if "source_page" not in st.session_state:
+        st.session_state.source_page = 0
+
+    count_query = """
+        SELECT COUNT(*) AS total_rows
+        FROM reputation.mention m
+        LEFT JOIN reputation.companies c ON m.company_id = c.company_id
+        WHERE (%s = 'All' OR c.name = %s);
+    """
+
+    count_df = safe_read_df(count_query, params=(company, company))
+
+    total_rows = int(count_df["total_rows"].iloc[0]) if not count_df.empty else 0
+    total_pages = max((total_rows - 1) // rows_per_page + 1, 1)
+
+    if st.session_state.source_page >= total_pages:
+        st.session_state.source_page = total_pages - 1
+
+    offset = st.session_state.source_page * rows_per_page
+
+    col_prev, col_page, col_next = st.columns([1, 2, 1])
+
+    with col_prev:
+        if st.button("⬅ Previous", disabled=st.session_state.source_page == 0):
+            st.session_state.source_page -= 1
+            st.rerun()
+
+    with col_page:
+        st.markdown(
+            f"### Page {st.session_state.source_page + 1} / {total_pages} "
+            f"— showing rows {offset + 1} to {min(offset + rows_per_page, total_rows)} of {total_rows}"
+        )
+
+    with col_next:
+        if st.button("Next ➡", disabled=st.session_state.source_page >= total_pages - 1):
+            st.session_state.source_page += 1
+            st.rerun()
+
+    source_df = safe_read_df("""
+        SELECT
+            m.mention_id,
+            c.name AS company_name,
+            m.external_id,
+            CASE
+                WHEN m.external_id LIKE 'post_%%' THEN 'post'
+                WHEN m.external_id LIKE 'comment_%%' THEN 'comment'
+                ELSE 'unknown'
+            END AS reddit_object_type,
+            REPLACE(REPLACE(m.external_id, 'post_', ''), 'comment_', '') AS reddit_object_id,
+            m.author,
+            m.published_at,
+            m.collected_at,
+            m.title,
+            m.content,
+            m.subreddit,
+            m.post_id,
+            m.comment_id,
+            m.reddit_url
+        FROM reputation.mention m
+        LEFT JOIN reputation.companies c ON m.company_id = c.company_id
+        WHERE (%s = 'All' OR c.name = %s)
+        ORDER BY m.published_at DESC
+        LIMIT %s OFFSET %s;
+    """, params=(company, company, rows_per_page, offset))
+
+    if source_df.empty:
+        st.warning("Nu există date pentru filtrul selectat.")
+    else:
+        st.markdown("### Existing Reddit mentions")
+
+        display_cols = [
+            "mention_id",
+            "company_name",
+            "reddit_object_type",
+            "reddit_object_id",
+            "external_id",
+            "author",
+            "published_at",
+            "collected_at",
+            "title",
+            "content",
+        ]
+
+        st.dataframe(
+            source_df[display_cols],
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.markdown("---")
+        st.markdown("### Inspect selected mention")
+
+        selected_mention = st.selectbox(
+            "Choose a mention ID:",
+            source_df["mention_id"].tolist()
+        )
+
+        selected_row = source_df[source_df["mention_id"] == selected_mention].iloc[0]
+
+        st.write(f"**Company:** {selected_row.get('company_name', '')}")
+        st.write(f"**Reddit object type:** `{selected_row.get('reddit_object_type', '')}`")
+        st.write(f"**Reddit object ID:** `{selected_row.get('reddit_object_id', '')}`")
+        st.write(f"**External ID stored in database:** `{selected_row.get('external_id', '')}`")
+        st.write(f"**Author:** `{selected_row.get('author', '')}`")
+        st.write(f"**Published at:** `{selected_row.get('published_at', '')}`")
+        st.write(f"**Collected at:** `{selected_row.get('collected_at', '')}`")
+
+        if pd.notna(selected_row.get("subreddit")):
+            st.write(f"**Subreddit:** r/{selected_row.get('subreddit', '')}")
+
+        if pd.notna(selected_row.get("post_id")):
+            st.write(f"**Post ID:** `{selected_row.get('post_id', '')}`")
+
+        if pd.notna(selected_row.get("comment_id")):
+            st.write(f"**Comment ID:** `{selected_row.get('comment_id', '')}`")
+
+        if pd.notna(selected_row.get("reddit_url")) and str(selected_row.get("reddit_url")).strip():
+            st.link_button("Open original Reddit source", selected_row["reddit_url"])
+        else:
+            st.warning(
+                "This older row does not contain a direct Reddit URL because the URL metadata field "
+                "was added after the original collection."
+            )
+
+        st.markdown("#### Title")
+        st.write(selected_row.get("title", ""))
+
+        st.markdown("#### Text stored in database")
+        st.write(selected_row.get("content", ""))
+
+        st.markdown("---")
+        st.markdown("### Database source explanation")
+
+        st.code("""
+Existing stored Reddit record example:
+
+{
+  "mention_id": 123,
+  "external_id": "comment_abc123",
+  "reddit_object_type": "comment",
+  "reddit_object_id": "abc123",
+  "author": "reddit_user",
+  "published_at": "timestamp from Reddit created_utc",
+  "collected_at": "timestamp when saved in PostgreSQL"
+}
+        """, language="json")

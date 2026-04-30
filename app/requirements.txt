@@ -10,3 +10,4 @@ vaderSentiment
 matplotlib
 transformers
 torch
+torchvision
