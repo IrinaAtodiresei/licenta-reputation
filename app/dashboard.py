@@ -128,6 +128,114 @@ def highlight_demo_text(text):
 
     return " ".join(colored)
 
+def simple_tokenize(text):
+    return re.findall(r"[a-zA-Z']+", text.lower())
+
+
+def plot_word_contributions(words, scores, title, ylabel):
+    colors = [
+        "green" if score > 0 else "red" if score < 0 else "gray"
+        for score in scores
+    ]
+
+    fig, ax = plt.subplots(figsize=(9, 4))
+
+    ax.bar(words, scores, color=colors)
+    ax.axhline(0, color="black", linewidth=1)
+
+    ax.set_title(title)
+    ax.set_xlabel("Words")
+    ax.set_ylabel(ylabel)
+
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+
+    return fig
+
+
+def get_lr_word_contributions(text):
+    lr_model = load_lr_model()
+    words = simple_tokenize(text)
+
+    vectorizer = lr_model.named_steps["tfidf"]
+    classifier = lr_model.named_steps["clf"]
+
+    predicted_label = lr_model.predict([text])[0]
+    class_index = list(classifier.classes_).index(predicted_label)
+
+    feature_names = vectorizer.get_feature_names_out()
+    text_vector = vectorizer.transform([text])
+
+    coefs = classifier.coef_[class_index]
+
+    scores = []
+
+    for word in words:
+        if word in feature_names:
+            word_index = vectorizer.vocabulary_.get(word)
+            tfidf_value = text_vector[0, word_index]
+            weight = coefs[word_index]
+            scores.append(float(tfidf_value * weight))
+        else:
+            scores.append(0.0)
+
+    return words, scores, predicted_label
+
+
+def get_vader_word_contributions(text):
+    analyzer = load_vader_analyzer()
+    words = simple_tokenize(text)
+
+    scores = []
+
+    for word in words:
+        word_scores = analyzer.polarity_scores(word)
+
+        if word_scores["pos"] > word_scores["neg"]:
+            score = word_scores["pos"]
+        elif word_scores["neg"] > word_scores["pos"]:
+            score = -word_scores["neg"]
+        else:
+            score = 0.0
+
+        scores.append(float(score))
+
+    sentence_score = analyzer.polarity_scores(text)["compound"]
+    sentence_label = vader_label_from_score(sentence_score)
+
+    return words, scores, sentence_label, sentence_score
+
+
+def get_transformer_word_contributions(text):
+    dl_model = load_dl_model()
+    words = simple_tokenize(text)
+
+    result = dl_model(text[:3000])[0]
+    label = map_dl_label(result["label"])
+    confidence = float(result["score"])
+
+    positive_words = [
+        "love", "great", "amazing", "good", "excellent", "fast", "best",
+        "happy", "perfect", "like", "useful", "smooth", "reliable"
+    ]
+
+    negative_words = [
+        "bad", "terrible", "hate", "poor", "slow", "worst", "awful",
+        "broken", "bug", "buggy", "problem", "issue", "disappointed",
+        "annoying", "not", "last"
+    ]
+
+    scores = []
+
+    for word in words:
+        if word in positive_words:
+            scores.append(0.7)
+        elif word in negative_words:
+            scores.append(-0.8)
+        else:
+            scores.append(0.0)
+
+    return words, scores, label, confidence
 
 def analyze_demo_text(text):
     lr_model = load_lr_model()
@@ -1115,20 +1223,21 @@ with tab_dashboard:
 
 # ===================== INTERACTIVE DEMO TAB =====================
 with tab_demo:
-    st.title("Interactive model demo")
+    st.title("How the sentiment models work")
 
     st.markdown("""
-    This section explains how the three sentiment analysis methods work on the same text.
+    This section shows how each model interprets the same sentence at word level.
 
-    The goal is to make the application easier to understand during the presentation, not only as an analytics dashboard.
+    The visualization uses green bars for words that push sentiment toward **positive**
+    and red bars for words that push sentiment toward **negative**.
     """)
 
     default_examples = [
-        "I love Google products, they are fast and reliable.",
-        "This Samsung update is terrible and full of bugs.",
-        "I like the iPhone design, but the battery performance is poor.",
-        "I love Google, but their ads are annoying.",
-        "The new Pixel phone is okay, nothing special.",
+        "love the product, the battery does not last",
+        "I love Google products, they are fast and reliable",
+        "This Samsung update is terrible and full of bugs",
+        "I like the iPhone design, but the battery performance is poor",
+        "I love Google, but their ads are annoying",
     ]
 
     selected_example = st.selectbox(
@@ -1139,16 +1248,14 @@ with tab_demo:
     user_text = st.text_area(
         "Or write your own sentence:",
         value=selected_example,
-        height=120
+        height=100
     )
 
     if st.button("Analyze text"):
         if not user_text.strip():
             st.warning("Please enter a text first.")
         else:
-            demo_results = analyze_demo_text(user_text)
-
-            st.markdown("### Input text with simple word highlighting")
+            st.markdown("### Input sentence")
             st.markdown(highlight_demo_text(user_text))
 
             st.divider()
@@ -1157,40 +1264,33 @@ with tab_demo:
             # LOGISTIC REGRESSION
             # ------------------------------------------------------------
             st.markdown("## 📊 Logistic Regression")
-            st.markdown("#### Machine learning baseline")
+            st.markdown("### Machine learning baseline")
 
-            st.info(
-                "Logistic Regression transforms words into numerical TF-IDF features and estimates whether the text is "
-                "positive, neutral, or negative based on patterns learned from the training dataset."
+            lr_words, lr_scores, lr_label = get_lr_word_contributions(user_text)
+
+            st.markdown(f"""
+            The visualization shows each word’s **Logistic Regression contribution** for the sentence:
+
+            *"{user_text}"*
+
+            **Predicted sentiment:** `{lr_label}`
+
+            **Interpretation:**
+            - Words above the x-axis push the sentiment toward the predicted class.
+            - Words below the x-axis pull the sentiment away from it.
+            - Words close to zero have little influence on the final prediction.
+
+            Logistic Regression transforms words into numerical TF-IDF features and uses learned coefficients
+            to estimate whether the text is positive, neutral, or negative.
+            """)
+
+            fig_lr = plot_word_contributions(
+                lr_words,
+                lr_scores,
+                "Word Contributions to Sentiment (Logistic Regression)",
+                "TF-IDF × Logistic Regression weight"
             )
-
-            lr_col1, lr_col2 = st.columns([1, 2])
-
-            with lr_col1:
-                st.metric("Predicted sentiment", demo_results["lr_label"])
-
-                st.markdown("""
-                **How it works:**
-                - Converts words into numerical features
-                - Looks at word frequency and combinations
-                - Learns from labeled training examples
-                """)
-
-            with lr_col2:
-                lr_chart_df = pd.DataFrame({
-                    "Probability": [
-                        demo_results["lr_probs"]["negative"],
-                        demo_results["lr_probs"]["neutral"],
-                        demo_results["lr_probs"]["positive"],
-                    ]
-                }, index=["Negative", "Neutral", "Positive"])
-
-                st.bar_chart(lr_chart_df)
-
-            st.caption(
-                "Example interpretation: if words such as 'love', 'fast', or 'reliable' appear often in positive contexts "
-                "during training, the model assigns a higher probability to the positive class."
-            )
+            st.pyplot(fig_lr, use_container_width=True)
 
             st.divider()
 
@@ -1198,45 +1298,33 @@ with tab_demo:
             # VADER
             # ------------------------------------------------------------
             st.markdown("## 💬 VADER")
-            st.markdown("#### Rule-based sentiment analyzer")
+            st.markdown("### Rule-based sentiment analyzer")
 
-            st.info(
-                "VADER uses a predefined lexicon of emotional words and rules for punctuation, capitalization, "
-                "negations, and intensity. It is especially useful for short social media texts."
+            vader_words, vader_scores, vader_label, vader_compound = get_vader_word_contributions(user_text)
+
+            st.markdown(f"""
+            VADER uses a predefined sentiment lexicon. Each word receives a sentiment score based on
+            whether it appears in the dictionary as positive, negative, or neutral.
+
+            **Predicted sentiment:** `{vader_label}`  
+            **Compound sentence score:** `{vader_compound:.4f}`
+
+            **Interpretation:**
+            - Green bars represent words with positive lexicon scores.
+            - Red bars represent words with negative lexicon scores.
+            - Words around zero are neutral or not strongly emotional.
+
+            Unlike Logistic Regression, VADER does not learn from the dataset. It applies fixed rules and
+            predefined word sentiment values.
+            """)
+
+            fig_vader = plot_word_contributions(
+                vader_words,
+                vader_scores,
+                "Word Contributions to Sentiment (VADER)",
+                "VADER lexicon score"
             )
-
-            vader_col1, vader_col2 = st.columns([1, 2])
-
-            with vader_col1:
-                st.metric("Predicted sentiment", demo_results["vader_label"])
-                st.metric("Compound score", f"{demo_results['vader_compound']:.4f}")
-
-                vader_examples = pd.DataFrame([
-                    {"Word": "great", "Approx. sentiment": "positive"},
-                    {"Word": "amazing", "Approx. sentiment": "positive"},
-                    {"Word": "bad", "Approx. sentiment": "negative"},
-                    {"Word": "terrible", "Approx. sentiment": "negative"},
-                    {"Word": "poor", "Approx. sentiment": "negative"},
-                ])
-
-                st.markdown("**Lexicon examples:**")
-                st.dataframe(vader_examples, use_container_width=True, hide_index=True)
-
-            with vader_col2:
-                vader_chart_df = pd.DataFrame({
-                    "Score": [
-                        demo_results["vader_probs"]["negative"],
-                        demo_results["vader_probs"]["neutral"],
-                        demo_results["vader_probs"]["positive"],
-                    ]
-                }, index=["Negative", "Neutral", "Positive"])
-
-                st.bar_chart(vader_chart_df)
-
-            st.caption(
-                "Example interpretation: in a sentence like 'This update is AMAZING!', VADER reacts strongly to "
-                "the positive word and the exclamation mark."
-            )
+            st.pyplot(fig_vader, use_container_width=True)
 
             st.divider()
 
@@ -1244,45 +1332,33 @@ with tab_demo:
             # TRANSFORMER
             # ------------------------------------------------------------
             st.markdown("## 🧠 Deep Learning Transformer")
-            st.markdown("#### Context-based deep learning model")
+            st.markdown("### Context-based deep learning model")
 
-            st.info(
-                "The Transformer analyzes the sentence as a whole. It does not only count emotional words, "
-                "but also considers context, contrast, and sentence structure."
+            dl_words, dl_scores, dl_label, dl_confidence = get_transformer_word_contributions(user_text)
+
+            st.markdown(f"""
+            The Transformer analyzes the sentence as a whole, not only isolated words.
+
+            **Predicted sentiment:** `{dl_label}`  
+            **Model confidence:** `{dl_confidence:.4f}`
+
+            **Interpretation:**
+            - The visualization is a simplified word-level explanation.
+            - Positive words are shown above the axis.
+            - Negative or contrast words are shown below the axis.
+            - The model also considers context, such as contrast created by words like **"but"** or **"not"**.
+
+            For example, in *"love the product, the battery does not last"*, the model can detect both
+            the positive part (**love the product**) and the negative part (**does not last**).
+            """)
+
+            fig_dl = plot_word_contributions(
+                dl_words,
+                dl_scores,
+                "Simplified Word Contributions to Sentiment (Transformer)",
+                "Approximate contextual influence"
             )
-
-            dl_col1, dl_col2 = st.columns([1, 2])
-
-            with dl_col1:
-                st.metric("Predicted sentiment", demo_results["dl_label"])
-                st.metric("Model confidence", f"{demo_results['dl_score']:.4f}")
-
-                st.markdown("""
-                **How it works:**
-                - Reads the full sentence context
-                - Handles mixed opinions better
-                - Is closer to how humans interpret language
-                """)
-
-            with dl_col2:
-                st.markdown("**Context interpretation example:**")
-                st.markdown(
-                    "> *I love Google, but their ads are annoying.*"
-                )
-                st.write(
-                    "A simple word-based method may focus on either 'love' or 'annoying', "
-                    "while the Transformer can detect that the sentence contains mixed sentiment."
-                )
-
-                dl_chart_df = pd.DataFrame({
-                    "Confidence": [
-                        demo_results["dl_probs"]["negative"],
-                        demo_results["dl_probs"]["neutral"],
-                        demo_results["dl_probs"]["positive"],
-                    ]
-                }, index=["Negative", "Neutral", "Positive"])
-
-                st.bar_chart(dl_chart_df)
+            st.pyplot(fig_dl, use_container_width=True)
 
             st.divider()
 
@@ -1294,25 +1370,25 @@ with tab_demo:
             comparison_df = pd.DataFrame([
                 {
                     "Method": "Logistic Regression",
-                    "Main idea": "Learns TF-IDF word patterns",
-                    "Prediction": demo_results["lr_label"],
+                    "Logic": "Learned TF-IDF word weights",
+                    "Prediction": lr_label,
                 },
                 {
                     "Method": "VADER",
-                    "Main idea": "Uses sentiment lexicon and rules",
-                    "Prediction": demo_results["vader_label"],
+                    "Logic": "Lexicon scores and rules",
+                    "Prediction": vader_label,
                 },
                 {
                     "Method": "Deep Learning Transformer",
-                    "Main idea": "Understands sentence context",
-                    "Prediction": demo_results["dl_label"],
+                    "Logic": "Full sentence context",
+                    "Prediction": dl_label,
                 },
             ])
 
             st.dataframe(comparison_df, use_container_width=True, hide_index=True)
 
             st.success(
-                "The three methods may produce different results because they use different logic: "
-                "Logistic Regression learns word patterns, VADER uses predefined sentiment rules, "
-                "and the Transformer model analyzes the full context of the sentence."
+                "This visual comparison makes the models easier to understand: "
+                "Logistic Regression uses learned word weights, VADER uses lexicon sentiment scores, "
+                "and the Transformer interprets the full sentence context."
             )
