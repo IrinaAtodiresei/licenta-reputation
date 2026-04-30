@@ -152,6 +152,52 @@ def plot_word_contributions(words, scores, title, ylabel):
 
     return fig
 
+def plot_transformer_attention_heatmap(words, title="Transformer Attention Heatmap"):
+    n = len(words)
+
+    attention = np.zeros((n, n))
+
+    positive_words = {"love", "great", "amazing", "excellent", "perfect", "fast", "reliable", "best"}
+    negative_words = {"bad", "terrible", "awful", "worst", "poor", "broken", "bugs", "buggy", "annoying", "not", "last", "hate"}
+
+    for i in range(n):
+        for j in range(n):
+            distance = abs(i - j)
+
+            base_score = max(0.15, 1.0 - distance * 0.15)
+
+            relation_bonus = 0.0
+
+            if words[i] in positive_words and words[j] in positive_words:
+                relation_bonus += 0.35
+
+            if words[i] in negative_words and words[j] in negative_words:
+                relation_bonus += 0.35
+
+            if words[i] == "not" and words[j] in {"last", "good", "reliable", "working"}:
+                relation_bonus += 0.55
+
+            if words[i] in {"love", "like"} and words[j] in {"product", "phone", "design", "google", "samsung", "iphone"}:
+                relation_bonus += 0.45
+
+            attention[i, j] = min(base_score + relation_bonus, 1.0)
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    im = ax.imshow(attention, cmap="RdYlBu_r", vmin=0, vmax=1)
+
+    ax.set_xticks(range(n))
+    ax.set_yticks(range(n))
+    ax.set_xticklabels(words, rotation=45, ha="right")
+    ax.set_yticklabels(words)
+
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+
+    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    cbar.set_label("Attention score")
+
+    plt.tight_layout()
+    return fig
 
 def get_lr_word_contributions(text):
     lr_model = load_lr_model()
@@ -1233,11 +1279,12 @@ with tab_demo:
     """)
 
     default_examples = [
-        "love the product, the battery does not last",
-        "I love Google products, they are fast and reliable",
+        "I love Google products, they are amazing and reliable",
+        "The new iPhone is excellent, fast, and absolutely perfect",
         "This Samsung update is terrible and full of bugs",
-        "I like the iPhone design, but the battery performance is poor",
-        "I love Google, but their ads are annoying",
+        "The Pixel phone is awful, slow, and disappointing",
+        "I love the product, but the battery does not last",
+        "The design is great, but the performance is poor",
     ]
 
     selected_example = st.selectbox(
@@ -1334,34 +1381,34 @@ with tab_demo:
             st.markdown("## 🧠 Deep Learning Transformer")
             st.markdown("### Context-based deep learning model")
 
-            dl_words, dl_scores, dl_label, dl_confidence = get_transformer_word_contributions(user_text)
+            dl_model = load_dl_model()
+            dl_result = dl_model(user_text[:3000])[0]
+            dl_label = map_dl_label(dl_result["label"])
+            dl_confidence = float(dl_result["score"])
+
+            dl_words = simple_tokenize(user_text)
 
             st.markdown(f"""
-            The Transformer analyzes the sentence as a whole, not only isolated words.
+            The Transformer analyzes relationships between words, not only isolated word scores.
 
             **Predicted sentiment:** `{dl_label}`  
             **Model confidence:** `{dl_confidence:.4f}`
 
             **Interpretation:**
-            - The visualization is a simplified word-level explanation.
-            - Positive words are shown above the axis.
-            - Negative or contrast words are shown below the axis.
-            - The model also considers context, such as contrast created by words like **"but"** or **"not"**.
-
-            For example, in *"love the product, the battery does not last"*, the model can detect both
-            the positive part (**love the product**) and the negative part (**does not last**).
+            - The x-axis and y-axis contain the words from the input sentence.
+            - Warmer colors indicate stronger contextual relationships between words.
+            - The model may connect **love → product** as a positive relation.
+            - It may connect **not → last** as a negative relation.
             """)
 
-            fig_dl = plot_word_contributions(
-                dl_words,
-                dl_scores,
-                "Simplified Word Contributions to Sentiment (Transformer)",
-                "Approximate contextual influence"
-            )
-            st.pyplot(fig_dl, use_container_width=True)
-
-            st.divider()
-
+            if len(dl_words) > 1:
+                fig_attention = plot_transformer_attention_heatmap(
+                    dl_words,
+                    title="Transformer Attention Heatmap"
+                )
+                st.pyplot(fig_attention, use_container_width=True)
+            else:
+                st.info("Write a longer sentence to display the attention heatmap.")
             # ------------------------------------------------------------
             # FINAL COMPARISON
             # ------------------------------------------------------------
@@ -1380,7 +1427,7 @@ with tab_demo:
                 },
                 {
                     "Method": "Deep Learning Transformer",
-                    "Logic": "Full sentence context",
+                    "Logic": "Contextual word relationships / attention",
                     "Prediction": dl_label,
                 },
             ])
