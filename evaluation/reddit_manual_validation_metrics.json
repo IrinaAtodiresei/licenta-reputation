@@ -1,32 +1,32 @@
 {
     "lr_3class_balanced": {
         "sample_size": 494,
-        "accuracy": 0.48380566801619435,
-        "precision_macro": 0.43734054207895706,
-        "recall_macro": 0.4437249180332185,
-        "f1_macro": 0.4378390993976951,
-        "precision_weighted": 0.48259038933410664,
-        "recall_weighted": 0.48380566801619435,
-        "f1_weighted": 0.4804496479399964
+        "accuracy": 0.4959514170040486,
+        "precision_macro": 0.449655547498187,
+        "recall_macro": 0.4557973914820388,
+        "f1_macro": 0.450108897034619,
+        "precision_weighted": 0.4942316866942835,
+        "recall_weighted": 0.4959514170040486,
+        "f1_weighted": 0.4924316005815604
     },
     "vader": {
         "sample_size": 494,
-        "accuracy": 0.46963562753036436,
-        "precision_macro": 0.538560236511456,
-        "recall_macro": 0.5283392496831233,
-        "f1_macro": 0.4738795330064686,
-        "precision_weighted": 0.6040025853478999,
-        "recall_weighted": 0.46963562753036436,
-        "f1_weighted": 0.4849789969822095
+        "accuracy": 0.47368421052631576,
+        "precision_macro": 0.5440250845483662,
+        "recall_macro": 0.5312931523166654,
+        "f1_macro": 0.477860070701744,
+        "precision_weighted": 0.6105354580845302,
+        "recall_weighted": 0.47368421052631576,
+        "f1_weighted": 0.49012364578204004
     },
     "deep_learning_transformer": {
         "sample_size": 494,
-        "accuracy": 0.631578947368421,
-        "precision_macro": 0.6333851259063701,
-        "recall_macro": 0.6206000850269625,
-        "f1_macro": 0.6162409803162306,
-        "precision_weighted": 0.6612410917089835,
-        "recall_weighted": 0.631578947368421,
-        "f1_weighted": 0.6375733293777668
+        "accuracy": 0.6437246963562753,
+        "precision_macro": 0.6455815893444802,
+        "recall_macro": 0.6338633533193239,
+        "f1_macro": 0.6285026581555136,
+        "precision_weighted": 0.6731639810275627,
+        "recall_weighted": 0.6437246963562753,
+        "f1_weighted": 0.6491595394610064
     }
 }

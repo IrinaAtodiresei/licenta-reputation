@@ -876,6 +876,17 @@ else:
 
         manual_df = pd.read_csv(MANUAL_SAMPLE_PATH)
 
+        manual_df["manual_label"] = (
+            manual_df["manual_label"]
+            .astype(str)
+            .str.lower()
+            .str.strip()
+        )
+
+        manual_df = manual_df[
+            manual_df["manual_label"].isin(["negative", "neutral", "positive"])
+        ]
+
         if company != "All" and "company_name" in manual_df.columns:
             manual_df = manual_df[manual_df["company_name"] == company]
 
@@ -901,11 +912,22 @@ else:
 
             existing_display_cols = [col for col in display_cols if col in manual_df.columns]
 
-            st.markdown("### Manually labeled Reddit examples")
-            st.dataframe(
-                manual_df[existing_display_cols].head(50),
-                use_container_width=True
-            )
+            display_df = manual_df[existing_display_cols].head(50)
+
+
+            def highlight_correct(row):
+                if "is_correct" not in row:
+                    return [""] * len(row)
+
+                if row["is_correct"]:
+                    return ["background-color: #d4edda"] * len(row)  # verde
+                else:
+                    return ["background-color: #f8d7da"] * len(row)  # roșu
+
+
+            styled_df = display_df.style.apply(highlight_correct, axis=1)
+
+            st.dataframe(styled_df, use_container_width=True)
 
             st.download_button(
                 label="⬇ Download manual validation sample",

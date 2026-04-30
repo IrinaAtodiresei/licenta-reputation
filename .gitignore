@@ -4,6 +4,8 @@ __pycache__/
 *.joblib
 data/
 
-evaluation/X_train.pkl
-evaluation/y_train.pkl
+archive_sent140/X_train.pkl
+archive_sent140/y_train.pkl
 evaluation/cv_results.csv
+archive_sent140/training.1600000.processed.noemoticon.csv
+*.csv

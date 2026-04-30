@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import time
 import requests
@@ -32,7 +33,13 @@ HEADERS = {
 SUBREDDITS = [
     "samsung",
     "galaxy_samsung",
-    "SamsungSupport"
+    "SamsungSupport",
+    "apple",
+    "iphone",
+    "applehelp",
+    "GooglePixel",
+    "google",
+    "Android"
 ]
 
 
@@ -117,25 +124,22 @@ METHOD_VADER = "vader"
 def detect_company_id(text: str):
     text = text.lower()
 
-    company_scores = {}
+    matches = []
 
     for company, keywords in COMPANY_MAP.items():
-        score = 0
-
         for keyword in keywords:
-            if keyword in text:
-                score += 1
+            pattern = r"\b" + re.escape(keyword.lower()) + r"\b"
 
-        if score > 0:
-            company_scores[company] = score
+            if re.search(pattern, text):
+                matches.append(COMPANY_ID[company])
+                break
 
-    if not company_scores:
-        return None
+    matches = list(set(matches))
 
-    # Alege compania cu cele mai multe potriviri de keywords
-    best_company = max(company_scores, key=company_scores.get)
+    if len(matches) == 1:
+        return matches[0]
 
-    return COMPANY_ID[best_company]
+    return None
 
 
 def text_is_relevant(text: str):
@@ -269,12 +273,7 @@ def save_mention_and_sentiment(
     company_id = detect_company_id(combined)
 
     if company_id is None:
-        return {
-            "new_mention": 0,
-            "lr_inserted": 0,
-            "vader_inserted": 0,
-            "company_detected": 0
-        }
+        company_id = None
 
     try:
         published_at = datetime.fromtimestamp(float(created_utc), tz=timezone.utc)
@@ -349,7 +348,7 @@ def save_mention_and_sentiment(
         "new_mention": new_mention,
         "lr_inserted": lr_inserted,
         "vader_inserted": vader_inserted,
-        "company_detected": 1
+        "company_detected": 1 if company_id is not None else 0
     }
 
 
