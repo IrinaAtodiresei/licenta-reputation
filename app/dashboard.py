@@ -134,39 +134,49 @@ def analyze_demo_text(text):
     vader_analyzer = load_vader_analyzer()
     dl_model = load_dl_model()
 
+    # Logistic Regression
     lr_label = lr_model.predict([text])[0]
     lr_proba = lr_model.predict_proba([text])[0]
-    lr_confidence = float(lr_proba.max())
+    lr_classes = list(lr_model.classes_)
 
-    vader_score = float(vader_analyzer.polarity_scores(text)["compound"])
-    vader_label = vader_label_from_score(vader_score)
+    lr_probs = {
+        "negative": float(lr_proba[lr_classes.index("negative")]) if "negative" in lr_classes else 0.0,
+        "neutral": float(lr_proba[lr_classes.index("neutral")]) if "neutral" in lr_classes else 0.0,
+        "positive": float(lr_proba[lr_classes.index("positive")]) if "positive" in lr_classes else 0.0,
+    }
 
+    # VADER
+    vader_scores = vader_analyzer.polarity_scores(text)
+    vader_compound = float(vader_scores["compound"])
+    vader_label = vader_label_from_score(vader_compound)
+
+    vader_probs = {
+        "negative": float(vader_scores["neg"]),
+        "neutral": float(vader_scores["neu"]),
+        "positive": float(vader_scores["pos"]),
+    }
+
+    # Deep Learning Transformer
     dl_result = dl_model(text[:3000])[0]
     dl_label = map_dl_label(dl_result["label"])
     dl_score = float(dl_result["score"])
 
-    results = pd.DataFrame([
-        {
-            "Method": "Logistic Regression",
-            "Predicted label": lr_label,
-            "Score / confidence": lr_confidence,
-            "Explanation": "Uses TF-IDF word patterns learned from the training dataset."
-        },
-        {
-            "Method": "VADER",
-            "Predicted label": vader_label,
-            "Score / confidence": vader_score,
-            "Explanation": "Uses predefined sentiment words and rule-based scoring."
-        },
-        {
-            "Method": "Deep Learning Transformer",
-            "Predicted label": dl_label,
-            "Score / confidence": dl_score,
-            "Explanation": "Uses contextual language understanding from a transformer model."
-        },
-    ])
+    dl_probs = {
+        "negative": dl_score if dl_label == "negative" else 0.0,
+        "neutral": dl_score if dl_label == "neutral" else 0.0,
+        "positive": dl_score if dl_label == "positive" else 0.0,
+    }
 
-    return results
+    return {
+        "lr_label": lr_label,
+        "lr_probs": lr_probs,
+        "vader_label": vader_label,
+        "vader_compound": vader_compound,
+        "vader_probs": vader_probs,
+        "dl_label": dl_label,
+        "dl_score": dl_score,
+        "dl_probs": dl_probs,
+    }
 
 
 # ------------------------------------------------------------
@@ -1108,17 +1118,16 @@ with tab_demo:
     st.title("Interactive model demo")
 
     st.markdown("""
-    This section shows how the three sentiment analysis methods interpret the same text.
+    This section explains how the three sentiment analysis methods work on the same text.
 
-    - VADER reacts to direct emotional words.
-    - Logistic Regression uses TF-IDF word patterns.
-    - The Deep Learning Transformer analyzes the broader sentence context.
+    The goal is to make the application easier to understand during the presentation, not only as an analytics dashboard.
     """)
 
     default_examples = [
         "I love Google products, they are fast and reliable.",
         "This Samsung update is terrible and full of bugs.",
         "I like the iPhone design, but the battery performance is poor.",
+        "I love Google, but their ads are annoying.",
         "The new Pixel phone is okay, nothing special.",
     ]
 
@@ -1137,19 +1146,173 @@ with tab_demo:
         if not user_text.strip():
             st.warning("Please enter a text first.")
         else:
-            st.subheader("Highlighted text")
+            demo_results = analyze_demo_text(user_text)
+
+            st.markdown("### Input text with simple word highlighting")
             st.markdown(highlight_demo_text(user_text))
 
-            results = analyze_demo_text(user_text)
+            st.divider()
 
-            st.subheader("Model predictions")
-            st.dataframe(results, use_container_width=True, hide_index=True)
-
-            chart_df = results.set_index("Method")[["Score / confidence"]]
-            st.bar_chart(chart_df)
+            # ------------------------------------------------------------
+            # LOGISTIC REGRESSION
+            # ------------------------------------------------------------
+            st.markdown("## 📊 Logistic Regression")
+            st.markdown("#### Machine learning baseline")
 
             st.info(
-                "The methods may disagree because they use different logic: "
-                "VADER is rule-based, Logistic Regression is trained on TF-IDF features, "
-                "and the Transformer model uses contextual language understanding."
+                "Logistic Regression transforms words into numerical TF-IDF features and estimates whether the text is "
+                "positive, neutral, or negative based on patterns learned from the training dataset."
+            )
+
+            lr_col1, lr_col2 = st.columns([1, 2])
+
+            with lr_col1:
+                st.metric("Predicted sentiment", demo_results["lr_label"])
+
+                st.markdown("""
+                **How it works:**
+                - Converts words into numerical features
+                - Looks at word frequency and combinations
+                - Learns from labeled training examples
+                """)
+
+            with lr_col2:
+                lr_chart_df = pd.DataFrame({
+                    "Probability": [
+                        demo_results["lr_probs"]["negative"],
+                        demo_results["lr_probs"]["neutral"],
+                        demo_results["lr_probs"]["positive"],
+                    ]
+                }, index=["Negative", "Neutral", "Positive"])
+
+                st.bar_chart(lr_chart_df)
+
+            st.caption(
+                "Example interpretation: if words such as 'love', 'fast', or 'reliable' appear often in positive contexts "
+                "during training, the model assigns a higher probability to the positive class."
+            )
+
+            st.divider()
+
+            # ------------------------------------------------------------
+            # VADER
+            # ------------------------------------------------------------
+            st.markdown("## 💬 VADER")
+            st.markdown("#### Rule-based sentiment analyzer")
+
+            st.info(
+                "VADER uses a predefined lexicon of emotional words and rules for punctuation, capitalization, "
+                "negations, and intensity. It is especially useful for short social media texts."
+            )
+
+            vader_col1, vader_col2 = st.columns([1, 2])
+
+            with vader_col1:
+                st.metric("Predicted sentiment", demo_results["vader_label"])
+                st.metric("Compound score", f"{demo_results['vader_compound']:.4f}")
+
+                vader_examples = pd.DataFrame([
+                    {"Word": "great", "Approx. sentiment": "positive"},
+                    {"Word": "amazing", "Approx. sentiment": "positive"},
+                    {"Word": "bad", "Approx. sentiment": "negative"},
+                    {"Word": "terrible", "Approx. sentiment": "negative"},
+                    {"Word": "poor", "Approx. sentiment": "negative"},
+                ])
+
+                st.markdown("**Lexicon examples:**")
+                st.dataframe(vader_examples, use_container_width=True, hide_index=True)
+
+            with vader_col2:
+                vader_chart_df = pd.DataFrame({
+                    "Score": [
+                        demo_results["vader_probs"]["negative"],
+                        demo_results["vader_probs"]["neutral"],
+                        demo_results["vader_probs"]["positive"],
+                    ]
+                }, index=["Negative", "Neutral", "Positive"])
+
+                st.bar_chart(vader_chart_df)
+
+            st.caption(
+                "Example interpretation: in a sentence like 'This update is AMAZING!', VADER reacts strongly to "
+                "the positive word and the exclamation mark."
+            )
+
+            st.divider()
+
+            # ------------------------------------------------------------
+            # TRANSFORMER
+            # ------------------------------------------------------------
+            st.markdown("## 🧠 Deep Learning Transformer")
+            st.markdown("#### Context-based deep learning model")
+
+            st.info(
+                "The Transformer analyzes the sentence as a whole. It does not only count emotional words, "
+                "but also considers context, contrast, and sentence structure."
+            )
+
+            dl_col1, dl_col2 = st.columns([1, 2])
+
+            with dl_col1:
+                st.metric("Predicted sentiment", demo_results["dl_label"])
+                st.metric("Model confidence", f"{demo_results['dl_score']:.4f}")
+
+                st.markdown("""
+                **How it works:**
+                - Reads the full sentence context
+                - Handles mixed opinions better
+                - Is closer to how humans interpret language
+                """)
+
+            with dl_col2:
+                st.markdown("**Context interpretation example:**")
+                st.markdown(
+                    "> *I love Google, but their ads are annoying.*"
+                )
+                st.write(
+                    "A simple word-based method may focus on either 'love' or 'annoying', "
+                    "while the Transformer can detect that the sentence contains mixed sentiment."
+                )
+
+                dl_chart_df = pd.DataFrame({
+                    "Confidence": [
+                        demo_results["dl_probs"]["negative"],
+                        demo_results["dl_probs"]["neutral"],
+                        demo_results["dl_probs"]["positive"],
+                    ]
+                }, index=["Negative", "Neutral", "Positive"])
+
+                st.bar_chart(dl_chart_df)
+
+            st.divider()
+
+            # ------------------------------------------------------------
+            # FINAL COMPARISON
+            # ------------------------------------------------------------
+            st.markdown("## Final comparison")
+
+            comparison_df = pd.DataFrame([
+                {
+                    "Method": "Logistic Regression",
+                    "Main idea": "Learns TF-IDF word patterns",
+                    "Prediction": demo_results["lr_label"],
+                },
+                {
+                    "Method": "VADER",
+                    "Main idea": "Uses sentiment lexicon and rules",
+                    "Prediction": demo_results["vader_label"],
+                },
+                {
+                    "Method": "Deep Learning Transformer",
+                    "Main idea": "Understands sentence context",
+                    "Prediction": demo_results["dl_label"],
+                },
+            ])
+
+            st.dataframe(comparison_df, use_container_width=True, hide_index=True)
+
+            st.success(
+                "The three methods may produce different results because they use different logic: "
+                "Logistic Regression learns word patterns, VADER uses predefined sentiment rules, "
+                "and the Transformer model analyzes the full context of the sentence."
             )
