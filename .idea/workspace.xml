@@ -5,18 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5e144aed-1f1e-4264-bf5c-2969611e1c6d" name="Changes" comment="Added DistilBERT vs Logistic Regression comparison on labeled Reddit sample">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/connector_reddit_extended.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/connector_reddit_extended.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/dashboard.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/train_sentiment140.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/X_test.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/archive_sent140/X_test.pkl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/metrics.json" beforeDir="false" afterPath="$PROJECT_DIR$/archive_sent140/metrics.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/metrics_tuned.json" beforeDir="false" afterPath="$PROJECT_DIR$/archive_sent140/metrics_tuned.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/reddit_manual_validation_sample.csv" beforeDir="false" afterPath="$PROJECT_DIR$/evaluation/reddit_manual_validation_sample.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/evaluation/y_test.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/archive_sent140/y_test.pkl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/lr_sent140_tfidf.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/archive_sent140/lr_sent140_tfidf.pkl" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/lr_sent140_tfidf_tuned.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/archive_sent140/lr_sent140_tfidf_tuned.pkl" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -70,7 +60,7 @@
     "Python.train_sentiment140.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "manual-reddit-validation",
+    "git-widget-placeholder": "interactive-demo-tab",
     "settings.editor.selected.configurable": "preferences.lookFeel"
   }
 }]]></component>

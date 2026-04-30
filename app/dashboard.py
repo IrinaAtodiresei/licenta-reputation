@@ -1,4 +1,5 @@
 import os
+import re
 import json
 from pathlib import Path
 
@@ -7,6 +8,11 @@ import streamlit as st
 from dotenv import load_dotenv
 import psycopg
 import matplotlib.pyplot as plt
+
+import joblib
+import numpy as np
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from transformers import pipeline
 
 
 # ------------------------------------------------------------
@@ -27,6 +33,7 @@ EVAL_DIR = BASE_DIR / "evaluation"
 LR_METRICS_PATH = EVAL_DIR / "lr_3class_metrics.json"
 LR_CM_PATH = EVAL_DIR / "lr_3class_confusion_matrix.csv"
 LR_REPORT_PATH = EVAL_DIR / "lr_3class_classification_report.csv"
+LR_MODEL_PATH = BASE_DIR / "models" / "lr_3class_balanced.joblib"
 
 MANUAL_SAMPLE_PATH = EVAL_DIR / "reddit_manual_validation_sample.csv"
 MANUAL_METRICS_PATH = EVAL_DIR / "reddit_manual_validation_metrics.json"
@@ -56,6 +63,110 @@ def safe_read_df(sql: str, params=None) -> pd.DataFrame:
 
 def format_thousands_dot(value):
     return f"{int(value):,}".replace(",", ".")
+
+@st.cache_resource
+def load_lr_model():
+    return joblib.load(LR_MODEL_PATH)
+
+
+@st.cache_resource
+def load_vader_analyzer():
+    return SentimentIntensityAnalyzer()
+
+
+@st.cache_resource
+def load_dl_model():
+    return pipeline(
+        "sentiment-analysis",
+        model="cardiffnlp/twitter-roberta-base-sentiment-latest",
+        tokenizer="cardiffnlp/twitter-roberta-base-sentiment-latest",
+        truncation=True,
+        max_length=512
+    )
+
+
+def map_dl_label(label: str):
+    label = label.lower()
+
+    if "positive" in label:
+        return "positive"
+    if "negative" in label:
+        return "negative"
+    return "neutral"
+
+
+def vader_label_from_score(score):
+    if score >= 0.05:
+        return "positive"
+    elif score <= -0.05:
+        return "negative"
+    return "neutral"
+
+
+def highlight_demo_text(text):
+    positive_words = [
+        "love", "great", "amazing", "good", "excellent", "fast", "best",
+        "happy", "perfect", "like", "useful", "smooth"
+    ]
+
+    negative_words = [
+        "bad", "terrible", "hate", "poor", "slow", "worst", "awful",
+        "broken", "bug", "buggy", "problem", "issue", "disappointed"
+    ]
+
+    colored = []
+
+    for word in text.split():
+        clean_word = re.sub(r"[^a-zA-Z]", "", word).lower()
+
+        if clean_word in positive_words:
+            colored.append(f":green[{word}]")
+        elif clean_word in negative_words:
+            colored.append(f":red[{word}]")
+        else:
+            colored.append(word)
+
+    return " ".join(colored)
+
+
+def analyze_demo_text(text):
+    lr_model = load_lr_model()
+    vader_analyzer = load_vader_analyzer()
+    dl_model = load_dl_model()
+
+    lr_label = lr_model.predict([text])[0]
+    lr_proba = lr_model.predict_proba([text])[0]
+    lr_confidence = float(lr_proba.max())
+
+    vader_score = float(vader_analyzer.polarity_scores(text)["compound"])
+    vader_label = vader_label_from_score(vader_score)
+
+    dl_result = dl_model(text[:3000])[0]
+    dl_label = map_dl_label(dl_result["label"])
+    dl_score = float(dl_result["score"])
+
+    results = pd.DataFrame([
+        {
+            "Method": "Logistic Regression",
+            "Predicted label": lr_label,
+            "Score / confidence": lr_confidence,
+            "Explanation": "Uses TF-IDF word patterns learned from the training dataset."
+        },
+        {
+            "Method": "VADER",
+            "Predicted label": vader_label,
+            "Score / confidence": vader_score,
+            "Explanation": "Uses predefined sentiment words and rule-based scoring."
+        },
+        {
+            "Method": "Deep Learning Transformer",
+            "Predicted label": dl_label,
+            "Score / confidence": dl_score,
+            "Explanation": "Uses contextual language understanding from a transformer model."
+        },
+    ])
+
+    return results
 
 
 # ------------------------------------------------------------
@@ -418,545 +529,627 @@ if company != "All":
 # ------------------------------------------------------------
 # HEADER
 # ------------------------------------------------------------
-st.title("Reputation & Sentiment Dashboard")
-st.markdown("""
-### What does this app do?
+tab_dashboard, tab_demo = st.tabs([
+    "Dashboard",
+    "Interactive model demo"
+])
 
-This application analyzes public Reddit discussions about major tech companies 
-and automatically detects whether the sentiment is **positive, neutral, or negative**.
+# ===================== DASHBOARD TAB =====================
+with tab_dashboard:
 
-It compares three different approaches:
-- Logistic Regression (machine learning baseline)
-- VADER (rule-based)
-- Deep Learning Transformer
+    st.title("Reputation & Sentiment Dashboard")
 
-Use the controls on the left to explore how sentiment changes across companies and methods.
-""")
-st.subheader(f"Method: {method_name}")
+    st.markdown("""
+    ### What does this app do?
 
-st.markdown("### Overview of collected data")
-st.info(
-    "The dataset contains Reddit posts and comments collected through the Reddit public JSON API. "
-    "The collection process used selected technology-related subreddits, keyword filtering, pagination, "
-    "search endpoints, pagination, and comment extraction. "
-    "The collected mentions are stored in a PostgreSQL database and analyzed using three sentiment analysis methods."
-)
+    This application analyzes public Reddit discussions about major tech companies 
+    and automatically detects whether the sentiment is **positive, neutral, or negative**.
+
+    It compares three different approaches:
+    - Logistic Regression (machine learning baseline)
+    - VADER (rule-based)
+    - Deep Learning Transformer
+
+    Use the controls on the left to explore how sentiment changes across companies and methods.
+    """)
+
+    st.subheader(f"Method: {method_name}")
+
+    st.markdown("### Overview of collected data")
+
+    st.info(
+        "The dataset contains Reddit posts and comments collected through the Reddit public JSON API. "
+        "The collection process used selected technology-related subreddits, keyword filtering, pagination, "
+        "search endpoints, pagination, and comment extraction. "
+        "The collected mentions are stored in a PostgreSQL database and analyzed using three sentiment analysis methods."
+    )
 
 
-# ------------------------------------------------------------
-# KPI BOXES
-# ------------------------------------------------------------
-if method == "lr_3class_balanced":
-    col1, col2, col3 = st.columns(3)
-else:
-    col1, col2, col3, col4 = st.columns(4)
-
-total_mentions = int(summary["mentions"].sum()) if not summary.empty and "mentions" in summary.columns else 0
-
-if not summary.empty and total_mentions > 0 and "avg_score" in summary.columns:
-    avg_score = float((summary["avg_score"] * summary["mentions"]).sum() / total_mentions)
-else:
-    avg_score = 0.0
-
-if not summary.empty and total_mentions > 0 and "negatives" in summary.columns:
-    total_negatives = int(summary["negatives"].sum())
-    pct_neg = float((total_negatives / total_mentions) * 100)
-else:
-    total_negatives = 0
-    pct_neg = 0.0
-
-if not comparison_company.empty:
-    if "different_mentions" in comparison_company.columns and "total_mentions" in comparison_company.columns:
-        total_different = comparison_company["different_mentions"].sum()
-        total_posts = comparison_company["total_mentions"].sum()
-        pct_diff = float((total_different / total_posts) * 100) if total_posts > 0 else 0.0
-    elif "pct_different" in comparison_company.columns:
-        pct_diff = float(comparison_company["pct_different"].mean())
+    # ------------------------------------------------------------
+    # KPI BOXES
+    # ------------------------------------------------------------
+    if method == "lr_3class_balanced":
+        col1, col2, col3 = st.columns(3)
     else:
-        pct_diff = 0.0
-else:
-    pct_diff = 0.0
+        col1, col2, col3, col4 = st.columns(4)
 
-col1.metric("Total mentions (filtered)", format_thousands_dot(total_mentions))
-col2.metric("Model confidence", f"{avg_score:.4f}")
-col3.metric("% Negative", f"{pct_neg:.2f}%")
+    total_mentions = int(summary["mentions"].sum()) if not summary.empty and "mentions" in summary.columns else 0
 
-if method == "vader":
-    col4.metric("% Disagreement LR vs VADER", f"{pct_diff:.2f}%")
-elif method == "deep_learning_transformer":
-    col4.metric("% Disagreement LR vs DL", f"{pct_diff:.2f}%")
+    if not summary.empty and total_mentions > 0 and "avg_score" in summary.columns:
+        avg_score = float((summary["avg_score"] * summary["mentions"]).sum() / total_mentions)
+    else:
+        avg_score = 0.0
 
-st.caption(
-    "Note: Avg confidence represents the average confidence/probability of the selected model. "
-    "For VADER, the score represents the compound sentiment score."
-)
-
-st.caption("The dashboard uses the data currently stored in the PostgreSQL database.")
-
-
-# ------------------------------------------------------------
-# SENTIMENT DISTRIBUTION
-# ------------------------------------------------------------
-st.markdown("### Sentiment distribution by method")
-
-method_distribution = safe_read_df("""
-    SELECT
-        method,
-        SUM(CASE WHEN label = 'positive' THEN 1 ELSE 0 END) AS positive,
-        SUM(CASE WHEN label = 'neutral' THEN 1 ELSE 0 END) AS neutral,
-        SUM(CASE WHEN label = 'negative' THEN 1 ELSE 0 END) AS negative,
-        COUNT(*) AS total
-    FROM reputation.sentiment_result
-    GROUP BY method
-    ORDER BY method;
-""")
-
-if not method_distribution.empty:
-    st.dataframe(method_distribution, use_container_width=True)
-
-    chart_df = method_distribution.set_index("method")[["positive", "neutral", "negative"]]
-    st.bar_chart(chart_df)
-else:
-    st.info("Nu există date suficiente pentru distribuția sentimentului pe metode.")
-
-
-# ------------------------------------------------------------
-# EXTRA OVERVIEW
-# ------------------------------------------------------------
-st.markdown("### Sentiment breakdown")
-
-extra1, extra2, extra3 = st.columns(3)
-
-positive_count = int(summary["positives"].sum()) if not summary.empty and "positives" in summary.columns else 0
-negative_count = int(summary["negatives"].sum()) if not summary.empty and "negatives" in summary.columns else 0
-neutral_count = int(summary["neutrals"].sum()) if not summary.empty and "neutrals" in summary.columns else 0
-
-extra1.metric("Positive mentions", format_thousands_dot(positive_count))
-extra2.metric("Negative mentions", format_thousands_dot(negative_count))
-extra3.metric("Neutral mentions", format_thousands_dot(neutral_count))
-
-st.markdown("---")
-
-
-# ------------------------------------------------------------
-# SUMMARY TABLE
-# ------------------------------------------------------------
-st.subheader("Company summary (selected method)")
-
-cols_order = [
-    "company_id",
-    "company_name",
-    "method",
-    "mentions",
-    "avg_score",
-    "positives",
-    "negatives",
-    "neutrals",
-    "pct_negative",
-]
-
-if not summary.empty:
-    existing_cols = [col for col in cols_order if col in summary.columns]
-    summary = summary[existing_cols].sort_values("mentions", ascending=False)
-    st.dataframe(summary, use_container_width=True)
-
-    csv_bytes = summary.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        label="⬇ Download summary CSV",
-        data=csv_bytes,
-        file_name=f"summary_{method}.csv",
-        mime="text/csv",
-    )
-else:
-    st.info("Nu există date pentru filtrul selectat.")
-
-
-# ------------------------------------------------------------
-# CHARTS
-# ------------------------------------------------------------
-st.markdown("### Mentions by company")
-
-st.caption(
-    "Note: Differences in mention volume reflect the frequency of Reddit discussions captured from the selected "
-    "subreddits and keywords. A higher number of mentions does not necessarily indicate higher overall popularity "
-    "or better reputation."
-)
-
-if not summary.empty and "company_name" in summary.columns and "mentions" in summary.columns:
-    mentions_chart = summary[["company_name", "mentions"]].sort_values("mentions", ascending=True)
-    st.bar_chart(mentions_chart.set_index("company_name"))
-else:
-    st.info("Nu există date suficiente pentru graficul de volum.")
-
-st.markdown("### Negative sentiment by company")
-
-if not summary.empty and "company_name" in summary.columns and "pct_negative" in summary.columns:
-    negative_chart = summary[["company_name", "pct_negative"]].sort_values("pct_negative", ascending=True)
-    st.bar_chart(negative_chart.set_index("company_name"))
-else:
-    st.info("Nu există date suficiente pentru graficul de sentiment negativ.")
-
-
-# ------------------------------------------------------------
-# INTERPRETATION
-# ------------------------------------------------------------
-st.subheader("Interpretation")
-
-if total_mentions > 0:
-    interpretation = generate_interpretation(
-        company=company,
-        method_name=method_name,
-        total_mentions=total_mentions,
-        avg_score=avg_score,
-        pct_negative=pct_neg,
-        pct_disagreement=pct_diff,
-    )
-    st.info(interpretation)
-else:
-    st.info("No data is available for the current selection, so no interpretation can be generated.")
-
-st.markdown("### Method note")
-st.write(generate_method_note(method_name))
-
-st.markdown("---")
-
-
-# ------------------------------------------------------------
-# METHOD DISAGREEMENT
-# ------------------------------------------------------------
-if method in ["vader", "deep_learning_transformer"]:
-    st.subheader(f"Method disagreement: {comparison_title}")
+    if not summary.empty and total_mentions > 0 and "negatives" in summary.columns:
+        total_negatives = int(summary["negatives"].sum())
+        pct_neg = float((total_negatives / total_mentions) * 100)
+    else:
+        total_negatives = 0
+        pct_neg = 0.0
 
     if not comparison_company.empty:
-        sort_col = "pct_different" if "pct_different" in comparison_company.columns else comparison_company.columns[-1]
-        comparison_company = comparison_company.sort_values(sort_col, ascending=False)
-        st.dataframe(comparison_company, use_container_width=True)
-    else:
-        st.info("Nu exista date despre disagreement pentru filtrul selectat.")
-
-    st.subheader(f"Posts where {comparison_title} disagree")
-
-    if method == "deep_learning_transformer":
-        keep_cols = [
-            "mention_id",
-            "company_name",
-            "title",
-            "author",
-            "published_at",
-            "lr_label",
-            "lr_score",
-            "dl_label",
-            "dl_score",
-        ]
-    else:
-        keep_cols = [
-            "mention_id",
-            "company_name",
-            "title",
-            "author",
-            "published_at",
-            "lr_label",
-            "lr_score",
-            "vader_label",
-            "vader_score",
-        ]
-
-    if not comparison_rows.empty:
-        existing_keep_cols = [col for col in keep_cols if col in comparison_rows.columns]
-
-        if existing_keep_cols:
-            sort_col = "published_at" if "published_at" in comparison_rows.columns else existing_keep_cols[0]
-            comparison_rows = comparison_rows[existing_keep_cols].sort_values(
-                sort_col,
-                ascending=False,
-            ).head(limit_rows)
-            st.dataframe(comparison_rows, use_container_width=True)
+        if "different_mentions" in comparison_company.columns and "total_mentions" in comparison_company.columns:
+            total_different = comparison_company["different_mentions"].sum()
+            total_posts = comparison_company["total_mentions"].sum()
+            pct_diff = float((total_different / total_posts) * 100) if total_posts > 0 else 0.0
+        elif "pct_different" in comparison_company.columns:
+            pct_diff = float(comparison_company["pct_different"].mean())
         else:
-            st.info("Nu există coloanele necesare pentru afișarea comparației.")
+            pct_diff = 0.0
     else:
-        st.info("Nu exista postări în care metodele selectate să difere pentru filtrul selectat.")
+        pct_diff = 0.0
+
+    col1.metric("Total mentions (filtered)", format_thousands_dot(total_mentions))
+    col2.metric("Model confidence", f"{avg_score:.4f}")
+    col3.metric("% Negative", f"{pct_neg:.2f}%")
+
+    if method == "vader":
+        col4.metric("% Disagreement LR vs VADER", f"{pct_diff:.2f}%")
+    elif method == "deep_learning_transformer":
+        col4.metric("% Disagreement LR vs DL", f"{pct_diff:.2f}%")
+
+    st.caption(
+        "Note: Avg confidence represents the average confidence/probability of the selected model. "
+        "For VADER, the score represents the compound sentiment score."
+    )
+
+    st.caption("The dashboard uses the data currently stored in the PostgreSQL database.")
+
+
+    # ------------------------------------------------------------
+    # SENTIMENT DISTRIBUTION
+    # ------------------------------------------------------------
+    st.markdown("### Sentiment distribution by method")
+
+    method_distribution = safe_read_df("""
+        SELECT
+            method,
+            SUM(CASE WHEN label = 'positive' THEN 1 ELSE 0 END) AS positive,
+            SUM(CASE WHEN label = 'neutral' THEN 1 ELSE 0 END) AS neutral,
+            SUM(CASE WHEN label = 'negative' THEN 1 ELSE 0 END) AS negative,
+            COUNT(*) AS total
+        FROM reputation.sentiment_result
+        GROUP BY method
+        ORDER BY method;
+    """)
+
+    if not method_distribution.empty:
+        st.dataframe(method_distribution, use_container_width=True)
+
+        chart_df = method_distribution.set_index("method")[["positive", "neutral", "negative"]]
+        st.bar_chart(chart_df)
+    else:
+        st.info("Nu există date suficiente pentru distribuția sentimentului pe metode.")
+
+
+    # ------------------------------------------------------------
+    # EXTRA OVERVIEW
+    # ------------------------------------------------------------
+    st.markdown("### Sentiment breakdown")
+
+    extra1, extra2, extra3 = st.columns(3)
+
+    positive_count = int(summary["positives"].sum()) if not summary.empty and "positives" in summary.columns else 0
+    negative_count = int(summary["negatives"].sum()) if not summary.empty and "negatives" in summary.columns else 0
+    neutral_count = int(summary["neutrals"].sum()) if not summary.empty and "neutrals" in summary.columns else 0
+
+    extra1.metric("Positive mentions", format_thousands_dot(positive_count))
+    extra2.metric("Negative mentions", format_thousands_dot(negative_count))
+    extra3.metric("Neutral mentions", format_thousands_dot(neutral_count))
 
     st.markdown("---")
 
 
-# ------------------------------------------------------------
-# MOST NEGATIVE MENTIONS
-# ------------------------------------------------------------
-st.subheader("Most negative mentions")
+    # ------------------------------------------------------------
+    # SUMMARY TABLE
+    # ------------------------------------------------------------
+    st.subheader("Company summary (selected method)")
 
-if method == "deep_learning_transformer":
-    order_direction = "DESC"
-else:
-    order_direction = "ASC"
+    cols_order = [
+        "company_id",
+        "company_name",
+        "method",
+        "mentions",
+        "avg_score",
+        "positives",
+        "negatives",
+        "neutrals",
+        "pct_negative",
+    ]
 
-negative_examples = safe_read_df(f"""
-    SELECT
-        m.mention_id,
-        c.name AS company_name,
-        m.title,
-        m.content,
-        m.author,
-        m.published_at,
-        s.label,
-        s.score
-    FROM reputation.mention m
-    JOIN reputation.companies c ON m.company_id = c.company_id
-    JOIN reputation.sentiment_result s ON m.mention_id = s.mention_id
-    WHERE s.method = %s
-      AND s.label = 'negative'
-    ORDER BY s.score {order_direction}
-    LIMIT 30;
-""", params=(method,))
+    if not summary.empty:
+        existing_cols = [col for col in cols_order if col in summary.columns]
+        summary = summary[existing_cols].sort_values("mentions", ascending=False)
+        st.dataframe(summary, use_container_width=True)
 
-if company != "All" and not negative_examples.empty:
-    negative_examples = negative_examples[negative_examples["company_name"] == company]
-
-if not negative_examples.empty:
-    st.dataframe(negative_examples.head(10), use_container_width=True)
-else:
-    st.info("Nu există exemple negative pentru filtrul selectat.")
+        csv_bytes = summary.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="⬇ Download summary CSV",
+            data=csv_bytes,
+            file_name=f"summary_{method}.csv",
+            mime="text/csv",
+        )
+    else:
+        st.info("Nu există date pentru filtrul selectat.")
 
 
-# ------------------------------------------------------------
-# MODEL EVALUATION
-# ------------------------------------------------------------
-st.markdown("---")
-st.subheader("Model evaluation")
+    # ------------------------------------------------------------
+    # CHARTS
+    # ------------------------------------------------------------
+    st.markdown("### Mentions by company")
 
-if method == "lr_3class_balanced":
     st.caption(
-        "Note: the Logistic Regression model evaluation metrics and confusion matrix are computed on the new "
-        "3-class Twitter sentiment dataset, not on the collected Reddit mentions."
+        "Note: Differences in mention volume reflect the frequency of Reddit discussions captured from the selected "
+        "subreddits and keywords. A higher number of mentions does not necessarily indicate higher overall popularity "
+        "or better reputation."
     )
 
-    if LR_METRICS_PATH.exists():
-        with open(LR_METRICS_PATH, "r", encoding="utf-8") as f:
-            lr_metrics = json.load(f)
-
-        st.markdown("### Logistic Regression 3-class balanced metrics")
-
-        c1, c2, c3, c4 = st.columns(4)
-
-        c1.metric("Accuracy", f"{lr_metrics.get('accuracy', 0):.4f}")
-        c2.metric("Precision macro", f"{lr_metrics.get('precision_macro', 0):.4f}")
-        c3.metric("Recall macro", f"{lr_metrics.get('recall_macro', 0):.4f}")
-        c4.metric("F1 macro", f"{lr_metrics.get('f1_macro', 0):.4f}")
-
-        c5, c6, c7 = st.columns(3)
-        c5.metric("Precision weighted", f"{lr_metrics.get('precision_weighted', 0):.4f}")
-        c6.metric("Recall weighted", f"{lr_metrics.get('recall_weighted', 0):.4f}")
-        c7.metric("F1 weighted", f"{lr_metrics.get('f1_weighted', 0):.4f}")
-
+    if not summary.empty and "company_name" in summary.columns and "mentions" in summary.columns:
+        mentions_chart = summary[["company_name", "mentions"]].sort_values("mentions", ascending=True)
+        st.bar_chart(mentions_chart.set_index("company_name"))
     else:
-        st.warning("Nu gasesc fisierul evaluation/lr_3class_metrics.json.")
+        st.info("Nu există date suficiente pentru graficul de volum.")
 
-    if LR_CM_PATH.exists():
-        cm_df = pd.read_csv(LR_CM_PATH, index_col=0)
+    st.markdown("### Negative sentiment by company")
 
-        st.markdown("### Logistic Regression confusion matrices")
-        st.caption(
-            "The raw matrix shows the number of predictions, while the normalized matrix shows percentages per real class. "
-            "Rows represent actual labels and columns represent predicted labels."
-        )
-
-        col_raw, col_norm = st.columns(2)
-
-        with col_raw:
-            st.markdown("#### Raw confusion matrix")
-            fig_raw = plot_confusion_matrix_heatmap(cm_df, title="Raw")
-            st.pyplot(fig_raw, use_container_width=False)
-
-        with col_norm:
-            st.markdown("#### Normalized confusion matrix")
-            fig_norm = plot_normalized_confusion_matrix(cm_df, title="Normalized (%)")
-            st.pyplot(fig_norm, use_container_width=False)
-
-        st.caption(
-            "Observation: The model performs best on negative sentiment (~90%), while neutral is slightly harder to classify (~84%). "
-            "Most errors occur between neighboring sentiment classes."
-        )
+    if not summary.empty and "company_name" in summary.columns and "pct_negative" in summary.columns:
+        negative_chart = summary[["company_name", "pct_negative"]].sort_values("pct_negative", ascending=True)
+        st.bar_chart(negative_chart.set_index("company_name"))
     else:
-        st.warning("Nu gasesc fisierul evaluation/lr_3class_confusion_matrix.csv.")
+        st.info("Nu există date suficiente pentru graficul de sentiment negativ.")
 
-    if LR_REPORT_PATH.exists():
-        report_df = pd.read_csv(LR_REPORT_PATH, index_col=0)
-        st.markdown("### Classification report")
-        st.dataframe(report_df, use_container_width=True)
 
-elif method == "vader":
-    st.info(
-        "VADER is a rule-based sentiment analyzer, so hyperparameter tuning, "
-        "confusion matrix validation, and offline model-training metrics are not applicable here. "
-        "The VADER view is used only for the Reddit sentiment analysis above."
-    )
+    # ------------------------------------------------------------
+    # INTERPRETATION
+    # ------------------------------------------------------------
+    st.subheader("Interpretation")
 
-elif method == "deep_learning_transformer":
-    st.info(
-        "The Deep Learning Transformer model is used for sentiment inference on the collected Reddit mentions. "
-        "In this application, it was not trained from scratch and was not hyperparameter-tuned locally. "
-        "Therefore, local training metrics and confusion matrices are not shown for this method."
-    )
-
-# ------------------------------------------------------------
-# MANUAL REDDIT VALIDATION
-# ------------------------------------------------------------
-st.markdown("---")
-st.subheader("Manual Reddit validation")
-
-st.info(
-    "This section evaluates the selected sentiment analysis method on a manually labeled Reddit sample. "
-    "The manual labels are used as ground truth, while the model predictions are compared against them."
-)
-
-if not MANUAL_METRICS_PATH.exists() or not MANUAL_SAMPLE_PATH.exists():
-    st.warning(
-        "Manual validation files are not available yet. "
-        "Export a Reddit sample, label the manual_label column, then run the manual evaluation script."
-    )
-else:
-    with open(MANUAL_METRICS_PATH, "r", encoding="utf-8") as f:
-        manual_metrics = json.load(f)
-
-    if method not in manual_metrics:
-        st.warning("Nu exista metrici manuale pentru metoda selectata.")
+    if total_mentions > 0:
+        interpretation = generate_interpretation(
+            company=company,
+            method_name=method_name,
+            total_mentions=total_mentions,
+            avg_score=avg_score,
+            pct_negative=pct_neg,
+            pct_disagreement=pct_diff,
+        )
+        st.info(interpretation)
     else:
-        selected_manual_metrics = manual_metrics[method]
+        st.info("No data is available for the current selection, so no interpretation can be generated.")
 
-        st.markdown(f"### Manual validation results: {method_name}")
+    st.markdown("### Method note")
+    st.write(generate_method_note(method_name))
 
-        mv1, mv2, mv3, mv4 = st.columns(4)
+    st.markdown("---")
 
-        mv1.metric("Manual sample size", format_thousands_dot(selected_manual_metrics.get("sample_size", 0)))
-        mv2.metric("Accuracy", f"{selected_manual_metrics.get('accuracy', 0):.4f}")
-        mv3.metric("Precision macro", f"{selected_manual_metrics.get('precision_macro', 0):.4f}")
-        mv4.metric("F1 macro", f"{selected_manual_metrics.get('f1_macro', 0):.4f}")
 
-        mv5, mv6, mv7 = st.columns(3)
+    # ------------------------------------------------------------
+    # METHOD DISAGREEMENT
+    # ------------------------------------------------------------
+    if method in ["vader", "deep_learning_transformer"]:
+        st.subheader(f"Method disagreement: {comparison_title}")
 
-        mv5.metric("Recall macro", f"{selected_manual_metrics.get('recall_macro', 0):.4f}")
-        mv6.metric("F1 weighted", f"{selected_manual_metrics.get('f1_weighted', 0):.4f}")
-        mv7.metric("Accuracy on Reddit", f"{selected_manual_metrics.get('accuracy', 0) * 100:.2f}%")
+        if not comparison_company.empty:
+            sort_col = "pct_different" if "pct_different" in comparison_company.columns else comparison_company.columns[-1]
+            comparison_company = comparison_company.sort_values(sort_col, ascending=False)
+            st.dataframe(comparison_company, use_container_width=True)
+        else:
+            st.info("Nu exista date despre disagreement pentru filtrul selectat.")
 
-        st.caption(
-            "Unlike the previous training evaluation, these metrics are computed directly on Reddit mentions "
-            "that were manually labeled by the author of the project."
-        )
+        st.subheader(f"Posts where {comparison_title} disagree")
 
-        manual_cm_df = get_manual_cm_for_method(MANUAL_CM_PATH, method)
-
-        if not manual_cm_df.empty:
-            st.markdown("### Manual validation confusion matrices")
-
-            cm_left, cm_right = st.columns(2)
-
-            with cm_left:
-                st.markdown("#### Raw confusion matrix")
-                fig_manual_raw = plot_confusion_matrix_heatmap(
-                    manual_cm_df,
-                    title="Manual Reddit Validation - Raw"
-                )
-                st.pyplot(fig_manual_raw, use_container_width=False)
-
-            with cm_right:
-                st.markdown("#### Normalized confusion matrix")
-                fig_manual_norm = plot_normalized_confusion_matrix(
-                    manual_cm_df,
-                    title="Manual Reddit Validation - Normalized (%)"
-                )
-                st.pyplot(fig_manual_norm, use_container_width=False)
-
-        if MANUAL_REPORT_PATH.exists():
-            manual_report_df = pd.read_csv(MANUAL_REPORT_PATH)
-
-            if "method" in manual_report_df.columns:
-                manual_report_df = manual_report_df[manual_report_df["method"] == method]
-
-            st.markdown("### Manual validation classification report")
-            st.dataframe(manual_report_df, use_container_width=True)
-
-        manual_df = pd.read_csv(MANUAL_SAMPLE_PATH)
-
-        manual_df["manual_label"] = (
-            manual_df["manual_label"]
-            .astype(str)
-            .str.lower()
-            .str.strip()
-        )
-
-        manual_df = manual_df[
-            manual_df["manual_label"].isin(["negative", "neutral", "positive"])
-        ]
-
-        if company != "All" and "company_name" in manual_df.columns:
-            manual_df = manual_df[manual_df["company_name"] == company]
-
-        pred_col_map = {
-            "lr_3class_balanced": "lr_label",
-            "vader": "vader_label",
-            "deep_learning_transformer": "dl_label",
-        }
-
-        selected_pred_col = pred_col_map.get(method)
-
-        if selected_pred_col and selected_pred_col in manual_df.columns:
-            manual_df["is_correct"] = manual_df["manual_label"] == manual_df[selected_pred_col]
-
-            display_cols = [
+        if method == "deep_learning_transformer":
+            keep_cols = [
                 "mention_id",
                 "company_name",
-                "text",
-                "manual_label",
-                selected_pred_col,
-                "is_correct",
+                "title",
+                "author",
+                "published_at",
+                "lr_label",
+                "lr_score",
+                "dl_label",
+                "dl_score",
+            ]
+        else:
+            keep_cols = [
+                "mention_id",
+                "company_name",
+                "title",
+                "author",
+                "published_at",
+                "lr_label",
+                "lr_score",
+                "vader_label",
+                "vader_score",
             ]
 
-            existing_display_cols = [col for col in display_cols if col in manual_df.columns]
+        if not comparison_rows.empty:
+            existing_keep_cols = [col for col in keep_cols if col in comparison_rows.columns]
 
-            display_df = manual_df[existing_display_cols].head(50)
+            if existing_keep_cols:
+                sort_col = "published_at" if "published_at" in comparison_rows.columns else existing_keep_cols[0]
+                comparison_rows = comparison_rows[existing_keep_cols].sort_values(
+                    sort_col,
+                    ascending=False,
+                ).head(limit_rows)
+                st.dataframe(comparison_rows, use_container_width=True)
+            else:
+                st.info("Nu există coloanele necesare pentru afișarea comparației.")
+        else:
+            st.info("Nu exista postări în care metodele selectate să difere pentru filtrul selectat.")
+
+        st.markdown("---")
 
 
-            def highlight_correct(row):
-                if "is_correct" not in row:
-                    return [""] * len(row)
+    # ------------------------------------------------------------
+    # MOST NEGATIVE MENTIONS
+    # ------------------------------------------------------------
+    st.subheader("Most negative mentions")
 
-                if row["is_correct"]:
-                    return ["background-color: #d4edda"] * len(row)  # verde
-                else:
-                    return ["background-color: #f8d7da"] * len(row)  # roșu
+    if method == "deep_learning_transformer":
+        order_direction = "DESC"
+    else:
+        order_direction = "ASC"
+
+    negative_examples = safe_read_df(f"""
+        SELECT
+            m.mention_id,
+            c.name AS company_name,
+            m.title,
+            m.content,
+            m.author,
+            m.published_at,
+            s.label,
+            s.score
+        FROM reputation.mention m
+        JOIN reputation.companies c ON m.company_id = c.company_id
+        JOIN reputation.sentiment_result s ON m.mention_id = s.mention_id
+        WHERE s.method = %s
+          AND s.label = 'negative'
+        ORDER BY s.score {order_direction}
+        LIMIT 30;
+    """, params=(method,))
+
+    if company != "All" and not negative_examples.empty:
+        negative_examples = negative_examples[negative_examples["company_name"] == company]
+
+    if not negative_examples.empty:
+        st.dataframe(negative_examples.head(10), use_container_width=True)
+    else:
+        st.info("Nu există exemple negative pentru filtrul selectat.")
 
 
-            styled_df = display_df.style.apply(highlight_correct, axis=1)
+    # ------------------------------------------------------------
+    # MODEL EVALUATION
+    # ------------------------------------------------------------
+    st.markdown("---")
+    st.subheader("Model evaluation")
 
-            st.dataframe(styled_df, use_container_width=True)
+    if method == "lr_3class_balanced":
+        st.caption(
+            "Note: the Logistic Regression model evaluation metrics and confusion matrix are computed on the new "
+            "3-class Twitter sentiment dataset, not on the collected Reddit mentions."
+        )
 
-            st.download_button(
-                label="⬇ Download manual validation sample",
-                data=manual_df.to_csv(index=False).encode("utf-8-sig"),
-                file_name=f"manual_validation_{method}.csv",
-                mime="text/csv",
+        if LR_METRICS_PATH.exists():
+            with open(LR_METRICS_PATH, "r", encoding="utf-8") as f:
+                lr_metrics = json.load(f)
+
+            st.markdown("### Logistic Regression 3-class balanced metrics")
+
+            c1, c2, c3, c4 = st.columns(4)
+
+            c1.metric("Accuracy", f"{lr_metrics.get('accuracy', 0):.4f}")
+            c2.metric("Precision macro", f"{lr_metrics.get('precision_macro', 0):.4f}")
+            c3.metric("Recall macro", f"{lr_metrics.get('recall_macro', 0):.4f}")
+            c4.metric("F1 macro", f"{lr_metrics.get('f1_macro', 0):.4f}")
+
+            c5, c6, c7 = st.columns(3)
+            c5.metric("Precision weighted", f"{lr_metrics.get('precision_weighted', 0):.4f}")
+            c6.metric("Recall weighted", f"{lr_metrics.get('recall_weighted', 0):.4f}")
+            c7.metric("F1 weighted", f"{lr_metrics.get('f1_weighted', 0):.4f}")
+
+        else:
+            st.warning("Nu gasesc fisierul evaluation/lr_3class_metrics.json.")
+
+        if LR_CM_PATH.exists():
+            cm_df = pd.read_csv(LR_CM_PATH, index_col=0)
+
+            st.markdown("### Logistic Regression confusion matrices")
+            st.caption(
+                "The raw matrix shows the number of predictions, while the normalized matrix shows percentages per real class. "
+                "Rows represent actual labels and columns represent predicted labels."
             )
 
-        st.markdown("### Manual validation interpretation")
+            col_raw, col_norm = st.columns(2)
 
-        acc = selected_manual_metrics.get("accuracy", 0)
-        f1 = selected_manual_metrics.get("f1_macro", 0)
+            with col_raw:
+                st.markdown("#### Raw confusion matrix")
+                fig_raw = plot_confusion_matrix_heatmap(cm_df, title="Raw")
+                st.pyplot(fig_raw, use_container_width=False)
 
-        if acc >= 0.75:
-            manual_text = (
-                f"The selected method performs well on the manually labeled Reddit sample, "
-                f"with an accuracy of {acc:.4f} and a macro F1-score of {f1:.4f}."
-            )
-        elif acc >= 0.60:
-            manual_text = (
-                f"The selected method has moderate performance on the manually labeled Reddit sample, "
-                f"with an accuracy of {acc:.4f}. This suggests that Reddit language is more difficult "
-                f"than the original training data."
+            with col_norm:
+                st.markdown("#### Normalized confusion matrix")
+                fig_norm = plot_normalized_confusion_matrix(cm_df, title="Normalized (%)")
+                st.pyplot(fig_norm, use_container_width=False)
+
+            st.caption(
+                "Observation: The model performs best on negative sentiment (~90%), while neutral is slightly harder to classify (~84%). "
+                "Most errors occur between neighboring sentiment classes."
             )
         else:
-            manual_text = (
-                f"The selected method has limited performance on the manually labeled Reddit sample, "
-                f"with an accuracy of {acc:.4f}. This shows that model predictions should be interpreted carefully "
-                f"when applied to informal Reddit discussions."
+            st.warning("Nu gasesc fisierul evaluation/lr_3class_confusion_matrix.csv.")
+
+        if LR_REPORT_PATH.exists():
+            report_df = pd.read_csv(LR_REPORT_PATH, index_col=0)
+            st.markdown("### Classification report")
+            st.dataframe(report_df, use_container_width=True)
+
+    elif method == "vader":
+        st.info(
+            "VADER is a rule-based sentiment analyzer, so hyperparameter tuning, "
+            "confusion matrix validation, and offline model-training metrics are not applicable here. "
+            "The VADER view is used only for the Reddit sentiment analysis above."
+        )
+
+    elif method == "deep_learning_transformer":
+        st.info(
+            "The Deep Learning Transformer model is used for sentiment inference on the collected Reddit mentions. "
+            "In this application, it was not trained from scratch and was not hyperparameter-tuned locally. "
+            "Therefore, local training metrics and confusion matrices are not shown for this method."
+        )
+
+    # ------------------------------------------------------------
+    # MANUAL REDDIT VALIDATION
+    # ------------------------------------------------------------
+    st.markdown("---")
+    st.subheader("Manual Reddit validation")
+
+    st.info(
+        "This section evaluates the selected sentiment analysis method on a manually labeled Reddit sample. "
+        "The manual labels are used as ground truth, while the model predictions are compared against them."
+    )
+
+    if not MANUAL_METRICS_PATH.exists() or not MANUAL_SAMPLE_PATH.exists():
+        st.warning(
+            "Manual validation files are not available yet. "
+            "Export a Reddit sample, label the manual_label column, then run the manual evaluation script."
+        )
+    else:
+        with open(MANUAL_METRICS_PATH, "r", encoding="utf-8") as f:
+            manual_metrics = json.load(f)
+
+        if method not in manual_metrics:
+            st.warning("Nu exista metrici manuale pentru metoda selectata.")
+        else:
+            selected_manual_metrics = manual_metrics[method]
+
+            st.markdown(f"### Manual validation results: {method_name}")
+
+            manual_metrics_df = pd.DataFrame([
+                {
+                    "Metric": "Manual sample size",
+                    "Value": format_thousands_dot(selected_manual_metrics.get("sample_size", 0))
+                },
+                {
+                    "Metric": "Accuracy",
+                    "Value": f"{selected_manual_metrics.get('accuracy', 0):.4f}"
+                },
+                {
+                    "Metric": "Precision macro",
+                    "Value": f"{selected_manual_metrics.get('precision_macro', 0):.4f}"
+                },
+                {
+                    "Metric": "Recall macro",
+                    "Value": f"{selected_manual_metrics.get('recall_macro', 0):.4f}"
+                },
+                {
+                    "Metric": "F1 macro",
+                    "Value": f"{selected_manual_metrics.get('f1_macro', 0):.4f}"
+                },
+                {
+                    "Metric": "F1 weighted",
+                    "Value": f"{selected_manual_metrics.get('f1_weighted', 0):.4f}"
+                },
+                {
+                    "Metric": "Accuracy on Reddit",
+                    "Value": f"{selected_manual_metrics.get('accuracy', 0) * 100:.2f}%"
+                },
+            ])
+
+            st.dataframe(manual_metrics_df, use_container_width=True, hide_index=True)
+
+            st.caption(
+                "Unlike the previous training evaluation, these metrics are computed directly on Reddit mentions "
+                "that were manually labeled by the author of the project."
             )
 
-        st.info(manual_text)
+            manual_cm_df = get_manual_cm_for_method(MANUAL_CM_PATH, method)
+
+            if not manual_cm_df.empty:
+                st.markdown("### Manual validation confusion matrices")
+
+                cm_left, cm_right = st.columns(2)
+
+                with cm_left:
+                    st.markdown("#### Raw confusion matrix")
+                    fig_manual_raw = plot_confusion_matrix_heatmap(
+                        manual_cm_df,
+                        title="Manual Reddit Validation - Raw"
+                    )
+                    st.pyplot(fig_manual_raw, use_container_width=False)
+
+                with cm_right:
+                    st.markdown("#### Normalized confusion matrix")
+                    fig_manual_norm = plot_normalized_confusion_matrix(
+                        manual_cm_df,
+                        title="Manual Reddit Validation - Normalized (%)"
+                    )
+                    st.pyplot(fig_manual_norm, use_container_width=False)
+
+            if MANUAL_REPORT_PATH.exists():
+                manual_report_df = pd.read_csv(MANUAL_REPORT_PATH)
+
+                if "method" in manual_report_df.columns:
+                    manual_report_df = manual_report_df[manual_report_df["method"] == method]
+
+                st.markdown("### Manual validation classification report")
+                st.dataframe(manual_report_df, use_container_width=True)
+
+            manual_df = pd.read_csv(MANUAL_SAMPLE_PATH)
+
+            manual_df["manual_label"] = (
+                manual_df["manual_label"]
+                .astype(str)
+                .str.lower()
+                .str.strip()
+            )
+
+            manual_df = manual_df[
+                manual_df["manual_label"].isin(["negative", "neutral", "positive"])
+            ]
+
+            if company != "All" and "company_name" in manual_df.columns:
+                manual_df = manual_df[manual_df["company_name"] == company]
+
+            pred_col_map = {
+                "lr_3class_balanced": "lr_label",
+                "vader": "vader_label",
+                "deep_learning_transformer": "dl_label",
+            }
+
+            selected_pred_col = pred_col_map.get(method)
+
+            if selected_pred_col and selected_pred_col in manual_df.columns:
+                manual_df["is_correct"] = manual_df["manual_label"] == manual_df[selected_pred_col]
+
+                display_cols = [
+                    "mention_id",
+                    "company_name",
+                    "text",
+                    "manual_label",
+                    selected_pred_col,
+                    "is_correct",
+                ]
+
+                existing_display_cols = [col for col in display_cols if col in manual_df.columns]
+
+                display_df = manual_df[existing_display_cols].head(50)
+
+
+                def highlight_correct(row):
+                    if "is_correct" not in row:
+                        return [""] * len(row)
+
+                    if row["is_correct"]:
+                        return ["background-color: #d4edda"] * len(row)  # verde
+                    else:
+                        return ["background-color: #f8d7da"] * len(row)  # roșu
+
+
+                styled_df = display_df.style.apply(highlight_correct, axis=1)
+
+                st.dataframe(styled_df, use_container_width=True)
+
+                st.download_button(
+                    label="⬇ Download manual validation sample",
+                    data=manual_df.to_csv(index=False).encode("utf-8-sig"),
+                    file_name=f"manual_validation_{method}.csv",
+                    mime="text/csv",
+                )
+
+            st.markdown("### Manual validation interpretation")
+
+            acc = selected_manual_metrics.get("accuracy", 0)
+            f1 = selected_manual_metrics.get("f1_macro", 0)
+
+            if acc >= 0.75:
+                manual_text = (
+                    f"The selected method performs well on the manually labeled Reddit sample, "
+                    f"with an accuracy of {acc:.4f} and a macro F1-score of {f1:.4f}."
+                )
+            elif acc >= 0.60:
+                manual_text = (
+                    f"The selected method has moderate performance on the manually labeled Reddit sample, "
+                    f"with an accuracy of {acc:.4f}. This suggests that Reddit language is more difficult "
+                    f"than the original training data."
+                )
+            else:
+                manual_text = (
+                    f"The selected method has limited performance on the manually labeled Reddit sample, "
+                    f"with an accuracy of {acc:.4f}. This shows that model predictions should be interpreted carefully "
+                    f"when applied to informal Reddit discussions."
+                )
+
+            st.info(manual_text)
+
+# ===================== INTERACTIVE DEMO TAB =====================
+with tab_demo:
+    st.title("Interactive model demo")
+
+    st.markdown("""
+    This section shows how the three sentiment analysis methods interpret the same text.
+
+    - VADER reacts to direct emotional words.
+    - Logistic Regression uses TF-IDF word patterns.
+    - The Deep Learning Transformer analyzes the broader sentence context.
+    """)
+
+    default_examples = [
+        "I love Google products, they are fast and reliable.",
+        "This Samsung update is terrible and full of bugs.",
+        "I like the iPhone design, but the battery performance is poor.",
+        "The new Pixel phone is okay, nothing special.",
+    ]
+
+    selected_example = st.selectbox(
+        "Choose an example:",
+        default_examples
+    )
+
+    user_text = st.text_area(
+        "Or write your own sentence:",
+        value=selected_example,
+        height=120
+    )
+
+    if st.button("Analyze text"):
+        if not user_text.strip():
+            st.warning("Please enter a text first.")
+        else:
+            st.subheader("Highlighted text")
+            st.markdown(highlight_demo_text(user_text))
+
+            results = analyze_demo_text(user_text)
+
+            st.subheader("Model predictions")
+            st.dataframe(results, use_container_width=True, hide_index=True)
+
+            chart_df = results.set_index("Method")[["Score / confidence"]]
+            st.bar_chart(chart_df)
+
+            st.info(
+                "The methods may disagree because they use different logic: "
+                "VADER is rule-based, Logistic Regression is trained on TF-IDF features, "
+                "and the Transformer model uses contextual language understanding."
+            )
