@@ -1077,9 +1077,8 @@ else:
 st.markdown(
     """
     <style>
-    /* Scoate padding-ul default de sus din Streamlit */
     .block-container {
-        padding-top: 1rem !important;
+        padding-top: 0.3rem !important;
     }
 
     header {
@@ -1088,16 +1087,24 @@ st.markdown(
 
     .app-header {
         display: flex;
-        justify-content: flex-start;  /* LEFT */
+        justify-content: flex-start;
         align-items: center;
-        margin-top: -20px;   /* taie spațiul de sus */
-        margin-bottom: -10px; /* taie spațiul de jos */
+        margin-top: -20px;
+        margin-bottom: 5px;
+        background: transparent !important; /* 🔥 scoate gri */
     }
 
     .app-header img {
-        height: 50px;
-        margin: 0;
-        padding: 0;
+        height: 110px;   /* 🔥 MARE */
+        width: auto;
+        background: transparent !important; /* 🔥 sigur */
+        display: block;
+    }
+
+    /* 🔥 elimină orice "card" gri din Streamlit */
+    div[data-testid="stImage"] {
+        background: transparent !important;
+        padding: 0 !important;
     }
     </style>
     """,
