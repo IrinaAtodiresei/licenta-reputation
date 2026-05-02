@@ -70,7 +70,6 @@ def load_groq_client():
 
     return Groq(api_key=GROQ_API_KEY)
 
-
 def generate_llm_business_insight(company, method_name, summary_df, negative_df):
     client = load_groq_client()
 
@@ -101,11 +100,12 @@ def generate_llm_business_insight(company, method_name, summary_df, negative_df)
         for _, row in negative_df.head(20).iterrows():
             title = str(row.get("title", "") or "")
             content = str(row.get("content", "") or "")
+            example_company = str(row.get("company_name", "") or "Unknown")
             text = f"{title} {content}".strip()
             text = text[:500]
 
             if text:
-                examples.append(f"- {text}")
+                examples.append(f"- Company: {example_company} | Text: {text}")
 
         negative_examples_text = "\n".join(examples)
 
@@ -126,43 +126,44 @@ def generate_llm_business_insight(company, method_name, summary_df, negative_df)
 
         recommendation_title = "Strategic recommendation for a CEO or stakeholder"
 
-        prompt = f"""
-    You are a business analyst specialized in online reputation and sentiment analysis.
+    prompt = f"""
+You are a business analyst specialized in online reputation and sentiment analysis.
 
-    Analyze the following Reddit sentiment results and generate a clear executive interpretation.
+Analyze the following Reddit sentiment results and generate a clear executive interpretation.
 
-    Analysis scope:
-    {analysis_scope}
+Analysis scope:
+{analysis_scope}
 
-    Company filter: {company}
-    Sentiment method: {method_name}
+Company filter: {company}
+Sentiment method: {method_name}
 
-    Aggregated metrics:
-    - Total mentions: {total_mentions}
-    - Positive mentions: {positives}
-    - Neutral mentions: {neutrals}
-    - Negative mentions: {negatives}
-    - Average model score/confidence: {avg_score:.4f}
-    - Negative percentage: {pct_negative:.2f}%
+Aggregated metrics:
+- Total mentions: {total_mentions}
+- Positive mentions: {positives}
+- Neutral mentions: {neutrals}
+- Negative mentions: {negatives}
+- Average model score/confidence: {avg_score:.4f}
+- Negative percentage: {pct_negative:.2f}%
 
-    Most negative Reddit examples:
-    {negative_examples_text}
+Most negative Reddit examples:
+{negative_examples_text}
 
-    Write the answer in English.
+Write the answer in English.
 
-    Structure:
-    1. Executive summary
-    2. Main reputation risks
-    3. Possible reasons behind negative sentiment
-    4. {recommendation_title}
+Structure:
+1. Executive summary
+2. Main reputation risks
+3. Possible reasons behind negative sentiment
+4. {recommendation_title}
 
-    Rules:
-    - If company filter is All, do not treat Apple, Samsung, and Google as one company.
-    - If company filter is All, compare the companies at portfolio / market level.
-    - If company filter is All, avoid phrases like "the CEO should" or "the company should".
-    - Do not invent facts that are not supported by the metrics or examples.
-    - Keep it concise, academic, and business-oriented.
-    """
+Rules:
+- If company filter is All, do not treat Apple, Samsung, and Google as one company.
+- If company filter is All, compare the companies at portfolio / market level.
+- If company filter is All, avoid phrases like "the CEO should" or "the company should".
+- Do not invent facts that are not supported by the metrics or examples.
+- Keep it concise, academic, and business-oriented.
+"""
+
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
