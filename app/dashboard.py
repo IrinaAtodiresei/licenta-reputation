@@ -13,6 +13,7 @@ import joblib
 import numpy as np
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from transformers import pipeline
+from groq import Groq
 
 
 # ------------------------------------------------------------
@@ -40,6 +41,8 @@ MANUAL_METRICS_PATH = EVAL_DIR / "reddit_manual_validation_metrics.json"
 MANUAL_REPORT_PATH = EVAL_DIR / "reddit_manual_validation_report.csv"
 MANUAL_CM_PATH = EVAL_DIR / "reddit_manual_validation_confusion_matrix.csv"
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
 
 # ------------------------------------------------------------
 # DB HELPERS
@@ -60,6 +63,100 @@ def safe_read_df(sql: str, params=None) -> pd.DataFrame:
         st.warning(f"Nu s-au putut încărca datele pentru această secțiune: {e}")
         return pd.DataFrame()
 
+@st.cache_resource
+def load_groq_client():
+    if not GROQ_API_KEY:
+        return None
+
+    return Groq(api_key=GROQ_API_KEY)
+
+
+def generate_llm_business_insight(company, method_name, summary_df, negative_df):
+    client = load_groq_client()
+
+    if client is None:
+        return None
+
+    if summary_df.empty:
+        return "No data is available for the selected filters."
+
+    total_mentions = int(summary_df["mentions"].sum()) if "mentions" in summary_df.columns else 0
+    positives = int(summary_df["positives"].sum()) if "positives" in summary_df.columns else 0
+    negatives = int(summary_df["negatives"].sum()) if "negatives" in summary_df.columns else 0
+    neutrals = int(summary_df["neutrals"].sum()) if "neutrals" in summary_df.columns else 0
+
+    avg_score = 0.0
+    if total_mentions > 0 and "avg_score" in summary_df.columns:
+        avg_score = float((summary_df["avg_score"] * summary_df["mentions"]).sum() / total_mentions)
+
+    pct_negative = 0.0
+    if total_mentions > 0:
+        pct_negative = float((negatives / total_mentions) * 100)
+
+    negative_examples_text = ""
+
+    if not negative_df.empty:
+        examples = []
+
+        for _, row in negative_df.head(20).iterrows():
+            title = str(row.get("title", "") or "")
+            content = str(row.get("content", "") or "")
+            text = f"{title} {content}".strip()
+            text = text[:500]
+
+            if text:
+                examples.append(f"- {text}")
+
+        negative_examples_text = "\n".join(examples)
+
+    prompt = f"""
+You are a business analyst specialized in online reputation and sentiment analysis.
+
+Analyze the following Reddit sentiment results and generate a clear executive interpretation.
+
+Company filter: {company}
+Sentiment method: {method_name}
+
+Aggregated metrics:
+- Total mentions: {total_mentions}
+- Positive mentions: {positives}
+- Neutral mentions: {neutrals}
+- Negative mentions: {negatives}
+- Average model score/confidence: {avg_score:.4f}
+- Negative percentage: {pct_negative:.2f}%
+
+Most negative Reddit examples:
+{negative_examples_text}
+
+Write the answer in English.
+
+Structure:
+1. Executive summary
+2. Main reputation risks
+3. Possible reasons behind negative sentiment
+4. Strategic recommendation for a CEO or stakeholder
+
+Keep it concise, academic, and business-oriented.
+Do not invent facts that are not supported by the examples.
+"""
+
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {
+                "role": "system",
+                "content": "You transform sentiment analysis results into clear business insights."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.3,
+        max_tokens=700,
+    )
+
+    return response.choices[0].message.content
 
 def format_thousands_dot(value):
     return f"{int(value):,}".replace(",", ".")
@@ -726,16 +823,49 @@ if company != "All":
     if not comparison_rows.empty and "company_name" in comparison_rows.columns:
         comparison_rows = comparison_rows[comparison_rows["company_name"] == company]
 
+total_mentions = int(summary["mentions"].sum()) if not summary.empty and "mentions" in summary.columns else 0
 
+if not summary.empty and total_mentions > 0 and "avg_score" in summary.columns:
+    avg_score = float((summary["avg_score"] * summary["mentions"]).sum() / total_mentions)
+else:
+    avg_score = 0.0
+
+if not summary.empty and total_mentions > 0 and "negatives" in summary.columns:
+    total_negatives = int(summary["negatives"].sum())
+    pct_neg = float((total_negatives / total_mentions) * 100)
+else:
+    total_negatives = 0
+    pct_neg = 0.0
+
+positive_count = int(summary["positives"].sum()) if not summary.empty and "positives" in summary.columns else 0
+negative_count = int(summary["negatives"].sum()) if not summary.empty and "negatives" in summary.columns else 0
+neutral_count = int(summary["neutrals"].sum()) if not summary.empty and "neutrals" in summary.columns else 0
+
+if not comparison_company.empty:
+    if "different_mentions" in comparison_company.columns and "total_mentions" in comparison_company.columns:
+        total_different = comparison_company["different_mentions"].sum()
+        total_posts = comparison_company["total_mentions"].sum()
+        pct_diff = float((total_different / total_posts) * 100) if total_posts > 0 else 0.0
+    elif "pct_different" in comparison_company.columns:
+        pct_diff = float(comparison_company["pct_different"].mean())
+    else:
+        pct_diff = 0.0
+else:
+    pct_diff = 0.0
+
+if method == "deep_learning_transformer":
+    order_direction = "DESC"
+else:
+    order_direction = "ASC"
 # ------------------------------------------------------------
 # HEADER
 # ------------------------------------------------------------
-tab_dashboard, tab_demo, tab_source = st.tabs([
+tab_dashboard, tab_ai, tab_demo, tab_source = st.tabs([
     "Dashboard",
+    "AI insights",
     "Interactive model demo",
     "Proof of source"
 ])
-
 # ===================== DASHBOARD TAB =====================
 with tab_dashboard:
 
@@ -774,32 +904,6 @@ with tab_dashboard:
         col1, col2, col3 = st.columns(3)
     else:
         col1, col2, col3, col4 = st.columns(4)
-
-    total_mentions = int(summary["mentions"].sum()) if not summary.empty and "mentions" in summary.columns else 0
-
-    if not summary.empty and total_mentions > 0 and "avg_score" in summary.columns:
-        avg_score = float((summary["avg_score"] * summary["mentions"]).sum() / total_mentions)
-    else:
-        avg_score = 0.0
-
-    if not summary.empty and total_mentions > 0 and "negatives" in summary.columns:
-        total_negatives = int(summary["negatives"].sum())
-        pct_neg = float((total_negatives / total_mentions) * 100)
-    else:
-        total_negatives = 0
-        pct_neg = 0.0
-
-    if not comparison_company.empty:
-        if "different_mentions" in comparison_company.columns and "total_mentions" in comparison_company.columns:
-            total_different = comparison_company["different_mentions"].sum()
-            total_posts = comparison_company["total_mentions"].sum()
-            pct_diff = float((total_different / total_posts) * 100) if total_posts > 0 else 0.0
-        elif "pct_different" in comparison_company.columns:
-            pct_diff = float(comparison_company["pct_different"].mean())
-        else:
-            pct_diff = 0.0
-    else:
-        pct_diff = 0.0
 
     col1.metric("Total mentions (filtered)", format_thousands_dot(total_mentions))
     col2.metric("Model confidence", f"{avg_score:.4f}")
@@ -850,10 +954,6 @@ with tab_dashboard:
     st.markdown("### Sentiment breakdown")
 
     extra1, extra2, extra3 = st.columns(3)
-
-    positive_count = int(summary["positives"].sum()) if not summary.empty and "positives" in summary.columns else 0
-    negative_count = int(summary["negatives"].sum()) if not summary.empty and "negatives" in summary.columns else 0
-    neutral_count = int(summary["neutrals"].sum()) if not summary.empty and "neutrals" in summary.columns else 0
 
     extra1.metric("Positive mentions", format_thousands_dot(positive_count))
     extra2.metric("Negative mentions", format_thousands_dot(negative_count))
@@ -1305,6 +1405,123 @@ with tab_dashboard:
                 )
 
             st.info(manual_text)
+
+# ===================== AI INSIGHTS TAB =====================
+with tab_ai:
+    st.title("AI-generated business insights")
+
+    st.markdown("""
+    This section uses a Large Language Model to interpret the aggregated sentiment results.
+
+    Instead of showing only charts and scores, the LLM explains what the sentiment patterns may mean
+    from a business and reputation perspective.
+    """)
+
+    st.info(
+        "The LLM does not replace the sentiment models. It acts as an interpretation layer above the existing "
+        "Reddit sentiment results stored in the PostgreSQL database."
+    )
+
+    st.subheader("Selected analysis context")
+
+    ai_col1, ai_col2, ai_col3 = st.columns(3)
+
+    ai_col1.metric("Company", company)
+    ai_col2.metric("Method", method_name)
+    ai_col3.metric("Mentions", format_thousands_dot(total_mentions))
+
+    st.markdown("### Data sent to the LLM")
+
+    llm_negative_examples = safe_read_df(f"""
+        SELECT
+            m.mention_id,
+            c.name AS company_name,
+            m.title,
+            m.content,
+            m.author,
+            m.published_at,
+            s.label,
+            s.score
+        FROM reputation.mention m
+        JOIN reputation.companies c ON m.company_id = c.company_id
+        JOIN reputation.sentiment_result s ON m.mention_id = s.mention_id
+        WHERE s.method = %s
+          AND s.label = 'negative'
+          AND (%s = 'All' OR c.name = %s)
+        ORDER BY s.score {order_direction}
+        LIMIT 30;
+    """, params=(method, company, company))
+
+    llm_context_df = pd.DataFrame([
+        {
+            "company_filter": company,
+            "method": method_name,
+            "total_mentions": total_mentions,
+            "positive_mentions": positive_count,
+            "neutral_mentions": neutral_count,
+            "negative_mentions": negative_count,
+            "negative_percentage": f"{pct_neg:.2f}%",
+            "average_score": f"{avg_score:.4f}",
+        }
+    ])
+
+    st.dataframe(llm_context_df, use_container_width=True, hide_index=True)
+
+    st.markdown("### Negative examples used for interpretation")
+
+    if not llm_negative_examples.empty:
+        st.dataframe(
+            llm_negative_examples[
+                [
+                    "mention_id",
+                    "company_name",
+                    "title",
+                    "content",
+                    "published_at",
+                    "score",
+                ]
+            ].head(10),
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.info("No negative examples are available for the selected filters.")
+
+    st.markdown("---")
+    st.subheader("Generate LLM interpretation")
+
+    if not GROQ_API_KEY:
+        st.warning(
+            "GROQ_API_KEY is not configured. Add it in .env locally and in Streamlit Cloud Secrets for deployment."
+        )
+    else:
+        if st.button("Generate AI business insight"):
+            with st.spinner("Generating business interpretation with Groq..."):
+                try:
+                    insight = generate_llm_business_insight(
+                        company=company,
+                        method_name=method_name,
+                        summary_df=summary,
+                        negative_df=llm_negative_examples,
+                    )
+
+                    if insight:
+                        st.markdown("### LLM Interpretation")
+                        st.success(insight)
+                    else:
+                        st.warning("No interpretation could be generated.")
+
+                except Exception as e:
+                    st.error(f"LLM interpretation failed: {e}")
+
+    st.markdown("### Academic explanation")
+
+    st.write(
+        "The integration of Groq has the role of adding a semantic interpretation layer above the statistical "
+        "sentiment analysis. The system therefore moves from simple classification toward contextual understanding "
+        "of user opinions. This combines classic machine learning, rule-based analysis, transformer-based inference, "
+        "and modern LLM-based interpretation."
+    )
 
 # ===================== INTERACTIVE DEMO TAB =====================
 with tab_demo:

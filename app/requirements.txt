@@ -11,3 +11,4 @@ matplotlib
 transformers
 torch
 torchvision
+groq
