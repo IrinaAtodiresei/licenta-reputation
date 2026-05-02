@@ -821,11 +821,7 @@ if not st.session_state.entered_app:
 
     landing_logo_html = ""
     if LANDING_LOGO_PATH.exists():
-        landing_logo_html = f'''
-        <img src="data:image/png;base64,{base64.b64encode(open(LANDING_LOGO_PATH, "rb").read()).decode()}"
-             style="width:520px; max-width:100%; display:block; margin:0 auto 10px auto;">
-        '''
-
+        landing_logo_html = f'<img src="data:image/png;base64,{base64.b64encode(open(LANDING_LOGO_PATH, "rb").read()).decode()}" class="landing-logo">'
     st.markdown(
         f"""
         {landing_logo_html}
@@ -1078,7 +1074,8 @@ st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 0.3rem !important;
+        padding-top: 1rem !important;
+        max-width: 1100px;
     }
 
     header {
@@ -1106,9 +1103,49 @@ st.markdown(
         background: transparent !important;
         padding: 0 !important;
     }
+    
+     .landing-center {
+            max-width: 720px;
+            margin: 0 auto;
+            text-align: center;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .landing-logo {
+            width: 440px;
+            height: auto;
+            margin-bottom: 18px;
+        }
+        
+        .landing-card {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 22px;
+            padding: 22px 34px;
+            margin: 26px auto 0 auto;
+            color: #374151;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            text-align: center;
+            max-width: 820px;
+            transform: translateX(-12px);
+        }
+        
     </style>
     """,
     unsafe_allow_html=True
+
+
 )
 
 if LOGO_PATH.exists():
