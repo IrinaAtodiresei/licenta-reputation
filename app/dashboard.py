@@ -786,58 +786,65 @@ if not st.session_state.entered_app:
             font-size: 0.9rem;
             text-align: center;
         }
+        
+        .landing-center {
+            max-width: 720px;
+            margin: 0 auto;
+            text-align: center;
+        }
         </style>
         """,
         unsafe_allow_html=True
     )
 
-    col_left, col_center, col_right = st.columns([1, 2, 1])
+    st.markdown('<div class="landing-center">', unsafe_allow_html=True)
 
-    with col_center:
-        if LOGO_PATH.exists():
-            st.image(str(LOGO_PATH), width=210)
+    if LOGO_PATH.exists():
+        st.image(str(LOGO_PATH), width=210)
 
-        st.markdown(
-            """
-            <div class="landing-title">Reputation Dashboard</div>
+    st.markdown(
+        """
+        <div class="landing-title">Reputation Dashboard</div>
 
-            <div class="landing-subtitle">
-                This application analyzes the online reputation of major technology companies
-                based on public Reddit discussions. It combines machine learning, rule-based sentiment analysis,
-                transformer-based inference, and LLM-generated business interpretation.
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        <div class="landing-subtitle">
+            This application analyzes the online reputation of major technology companies
+            based on public Reddit discussions. It combines machine learning, rule-based sentiment analysis,
+            transformer-based inference, and LLM-generated business interpretation.
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
+    button_col1, button_col2, button_col3 = st.columns([1, 1, 1])
+    with button_col2:
         if st.button("Explore reputation analysis", type="primary"):
             st.session_state.entered_app = True
             st.rerun()
 
-        st.markdown(
-            """
-            <div class="landing-card">
-                <strong>Bachelor's thesis project</strong><br>
-                CSIE · Economic Informatics<br>
-                Coordinator: Ramona Bologa
-            </div>
+    st.markdown(
+        """
+        <div class="landing-card">
+            <strong>Bachelor's thesis project</strong><br>
+            CSIE · Economic Informatics<br>
+            Coordinator: Ramona Bologa
+        </div>
 
-            <div class="landing-footer">
-                2026 · Irina Atodiresei · GitHub: IrinaAtodiresei/licenta-reputation
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        <div class="landing-footer">
+            2026 · Irina Atodiresei · GitHub: IrinaAtodiresei/licenta-reputation
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
+    st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
+
 
 # ------------------------------------------------------------
 # SIDEBAR
 # ------------------------------------------------------------
 st.sidebar.title("Controls")
 
-if LOGO_PATH.exists():
-    st.sidebar.image(str(LOGO_PATH), width=130)
 
 st.sidebar.caption(
     "Choose a sentiment analysis method and optionally filter the results by company."
@@ -1047,6 +1054,16 @@ tab_dashboard, tab_ai, tab_demo, tab_source = st.tabs([
     "Interactive model demo",
     "Proof of source"
 ])
+
+if LOGO_PATH.exists():
+    st.markdown(
+        """
+        <div style="display:flex; justify-content:flex-start; margin-top: 12px; margin-bottom: 10px;">
+        """,
+        unsafe_allow_html=True
+    )
+    st.image(str(LOGO_PATH), width=95)
+    st.markdown("</div>", unsafe_allow_html=True)
 # ===================== DASHBOARD TAB =====================
 with tab_dashboard:
 
