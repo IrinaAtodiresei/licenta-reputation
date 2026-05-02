@@ -15,6 +15,7 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from transformers import pipeline
 from groq import Groq
 import time
+import base64
 
 # ------------------------------------------------------------
 # CONFIG
@@ -799,12 +800,16 @@ if not st.session_state.entered_app:
 
     st.markdown('<div class="landing-center">', unsafe_allow_html=True)
 
+    logo_html = ""
     if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), width=210)
+        logo_html = f'<img src="data:image/png;base64,{base64.b64encode(open(LOGO_PATH, "rb").read()).decode()}" style="width:70px; margin-right:15px;">'
 
     st.markdown(
-        """
-        <div class="landing-title">Reputation Dashboard</div>
+        f"""
+        <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
+            {logo_html}
+            <div class="landing-title" style="margin:0;">Reputation Dashboard</div>
+        </div>
 
         <div class="landing-subtitle">
             This application analyzes the online reputation of major technology companies
