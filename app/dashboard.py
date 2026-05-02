@@ -611,37 +611,6 @@ def generate_method_note(method_name):
         "In this application, the model is used for inference on the collected Reddit mentions, without local fine-tuning."
     )
 
-def generate_context_message(company, method_name, total_mentions, positive_count, neutral_count, negative_count, pct_neg):
-    if total_mentions == 0:
-        return "No mentions are available for the selected filters."
-
-    if company == "All":
-        company_text = "Apple, Samsung, and Google"
-        scope_text = "a comparative reputation overview"
-    else:
-        company_text = company
-        scope_text = f"the reputation of {company}"
-
-    dominant_label = max(
-        {
-            "positive": positive_count,
-            "neutral": neutral_count,
-            "negative": negative_count,
-        },
-        key={
-            "positive": positive_count,
-            "neutral": neutral_count,
-            "negative": negative_count,
-        }.get,
-    )
-
-    return (
-        f"We are analyzing {scope_text} using {format_thousands_dot(total_mentions)} real Reddit mentions. "
-        f"The current view uses {method_name}, and the dominant detected tone is {dominant_label}. "
-        f"Negative mentions represent {pct_neg:.2f}% of the selected data."
-    )
-
-
 # ------------------------------------------------------------
 # PLOTS
 # ------------------------------------------------------------
@@ -895,6 +864,23 @@ positive_count = int(summary["positives"].sum()) if not summary.empty and "posit
 negative_count = int(summary["negatives"].sum()) if not summary.empty and "negatives" in summary.columns else 0
 neutral_count = int(summary["neutrals"].sum()) if not summary.empty and "neutrals" in summary.columns else 0
 
+if "last_selected_company" not in st.session_state:
+    st.session_state.last_selected_company = company
+
+if st.session_state.last_selected_company != company:
+    if company == "All":
+        st.toast(
+            f"Analyzing Apple, Samsung, and Google based on {format_thousands_dot(total_mentions)} real Reddit mentions.",
+            icon="🔎"
+        )
+    else:
+        st.toast(
+            f"Analyzing {company}'s reputation based on {format_thousands_dot(total_mentions)} real Reddit mentions.",
+            icon="🔎"
+        )
+
+    st.session_state.last_selected_company = company
+
 if not comparison_company.empty:
     if "different_mentions" in comparison_company.columns and "total_mentions" in comparison_company.columns:
         total_different = comparison_company["different_mentions"].sum()
@@ -940,18 +926,6 @@ with tab_dashboard:
     """)
 
     st.subheader(f"Method: {method_name}")
-
-    st.info(
-        generate_context_message(
-            company=company,
-            method_name=method_name,
-            total_mentions=total_mentions,
-            positive_count=positive_count,
-            neutral_count=neutral_count,
-            negative_count=negative_count,
-            pct_neg=pct_neg,
-        )
-    )
 
     st.markdown("### Overview of collected data")
 
@@ -1488,18 +1462,6 @@ with tab_ai:
         "Reddit sentiment results stored in the PostgreSQL database."
     )
 
-    st.success(
-        generate_context_message(
-            company=company,
-            method_name=method_name,
-            total_mentions=total_mentions,
-            positive_count=positive_count,
-            neutral_count=neutral_count,
-            negative_count=negative_count,
-            pct_neg=pct_neg,
-        )
-    )
-
     st.subheader("Selected analysis context")
 
     ai_col1, ai_col2, ai_col3 = st.columns(3)
@@ -1545,27 +1507,6 @@ with tab_ai:
 
     st.dataframe(llm_context_df, use_container_width=True, hide_index=True)
 
-    sentiment_counts = {
-        "positive": positive_count,
-        "neutral": neutral_count,
-        "negative": negative_count,
-    }
-
-    dominant_sentiment = max(sentiment_counts, key=sentiment_counts.get)
-
-    if dominant_sentiment == "positive":
-        st.success(
-            "The current selection shows a stronger positive tone compared with the other sentiment classes."
-        )
-    elif dominant_sentiment == "negative":
-        st.warning(
-            "The current selection shows a visible negative tone, which may indicate reputation risks worth investigating."
-        )
-    else:
-        st.info(
-            "The current selection is dominated by neutral mentions, suggesting that many discussions are informational or mixed."
-        )
-
     st.markdown("### Negative examples used for interpretation")
 
     if not llm_negative_examples.empty:
@@ -1605,16 +1546,6 @@ with tab_ai:
                     )
 
                     if insight:
-                        if company == "All":
-                            st.info(
-                                "The model is now interpreting the overall reputation patterns across Apple, Samsung, and Google, "
-                                "using full aggregated metrics and selected negative examples as qualitative context."
-                            )
-                        else:
-                            st.info(
-                                f"The model is now interpreting {company}'s reputation using full aggregated metrics "
-                                "and selected negative examples as qualitative context."
-                            )
 
                         st.markdown("### LLM Interpretation")
                         st.success(insight)
