@@ -797,11 +797,12 @@ if not st.session_state.entered_app:
             margin: 0 auto 12px auto;
         }
 
-       .landing-card {
+      .landing-card {
             background: #f8fafc;
             border: 1px solid #e5e7eb;
             border-radius: 22px;
             padding: 18px 28px;
+            padding-left: 80px;  /* 🔥 asta mută textul unde vrei */
             margin-top: 26px;
             color: #374151;
             box-shadow: 0 10px 30px rgba(0,0,0,0.06);
