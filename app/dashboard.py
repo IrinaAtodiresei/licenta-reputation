@@ -1072,22 +1072,45 @@ if method == "deep_learning_transformer":
 else:
     order_direction = "ASC"
 # ------------------------------------------------------------
-# HEADER
+# HEADER (NEW - above tabs)
 # ------------------------------------------------------------
-header_logo_col, header_tabs_col = st.columns([0.08, 0.92])
+st.markdown(
+    """
+    <style>
+    .app-header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: -10px;
+        margin-bottom: 10px;
+    }
+    .app-header img {
+        height: 65px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-with header_logo_col:
-    if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), width=62)
+if LOGO_PATH.exists():
+    logo_base64 = base64.b64encode(open(LOGO_PATH, "rb").read()).decode()
 
-with header_tabs_col:
-    tab_dashboard, tab_ai, tab_demo, tab_source = st.tabs([
-        "Dashboard",
-        "AI insights",
-        "Interactive model demo",
-        "Proof of source"
-    ])
+    st.markdown(
+        f"""
+        <div class="app-header">
+            <img src="data:image/png;base64,{logo_base64}">
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
+# Tabs BELOW header
+tab_dashboard, tab_ai, tab_demo, tab_source = st.tabs([
+    "Dashboard",
+    "AI insights",
+    "Interactive model demo",
+    "Proof of source"
+])
 # ===================== DASHBOARD TAB =====================
 with tab_dashboard:
 
