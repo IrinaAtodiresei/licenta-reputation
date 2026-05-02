@@ -805,8 +805,8 @@ if not st.session_state.entered_app:
             margin-top: 26px;
             color: #374151;
             box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-            text-align: left;
-            width: 500px;
+            text-align: center;
+            width: 550px;
             margin-left: auto;
             margin-right: auto;
         }
