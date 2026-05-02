@@ -166,23 +166,41 @@ Rules:
 - Keep it concise, academic, and business-oriented.
 """
 
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        messages=[
-            {
-                "role": "system",
-                "content": "You transform sentiment analysis results into clear business insights."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.3,
-        max_tokens=700,
-    )
+    messages = [
+        {
+            "role": "system",
+            "content": "You transform sentiment analysis results into clear business insights."
+        },
+        {
+            "role": "user",
+            "content": prompt
+        }
+    ]
 
-    return response.choices[0].message.content
+    groq_models = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+    ]
+
+    last_error = None
+
+    for model_name in groq_models:
+        try:
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                temperature=0.3,
+                max_tokens=700,
+            )
+
+            st.session_state["last_groq_model"] = model_name
+            return response.choices[0].message.content
+
+        except Exception as e:
+            last_error = e
+            continue
+
+    raise Exception(f"All Groq fallback models failed. Last error: {last_error}")
 
 def format_thousands_dot(value):
     return f"{int(value):,}".replace(",", ".")
@@ -1690,6 +1708,9 @@ with tab_ai:
 
     st.markdown("---")
     st.subheader("Generate LLM interpretation")
+
+    if "last_groq_model" in st.session_state:
+        st.caption(f"Active Groq model used in the last successful generation: {st.session_state['last_groq_model']}")
 
     if not GROQ_API_KEY:
         st.warning(
