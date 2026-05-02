@@ -42,6 +42,7 @@ MANUAL_REPORT_PATH = EVAL_DIR / "reddit_manual_validation_report.csv"
 MANUAL_CM_PATH = EVAL_DIR / "reddit_manual_validation_confusion_matrix.csv"
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+LOGO_PATH = BASE_DIR / "app" / "assets" / "logo.png"
 
 
 # ------------------------------------------------------------
@@ -732,11 +733,111 @@ if "comparison_company" not in st.session_state:
 if "comparison_rows" not in st.session_state:
     st.session_state.comparison_rows = pd.DataFrame()
 
+if "entered_app" not in st.session_state:
+    st.session_state.entered_app = False
+
+# ------------------------------------------------------------
+# LANDING PAGE
+# ------------------------------------------------------------
+if not st.session_state.entered_app:
+    st.markdown(
+        """
+        <style>
+        header {
+            visibility: hidden;
+        }
+
+        .block-container {
+            padding-top: 2rem !important;
+            max-width: 1100px;
+        }
+
+        .landing-title {
+            font-size: 3.4rem;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .landing-subtitle {
+            font-size: 1.15rem;
+            max-width: 820px;
+            color: #374151;
+            line-height: 1.7;
+            margin: 0 auto 1.5rem auto;
+            text-align: center;
+        }
+
+        .landing-card {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 22px;
+            padding: 22px 34px;
+            margin-top: 26px;
+            color: #374151;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            text-align: center;
+        }
+
+        .landing-footer {
+            margin-top: 28px;
+            color: #6b7280;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+
+    col_left, col_center, col_right = st.columns([1, 2, 1])
+
+    with col_center:
+        if LOGO_PATH.exists():
+            st.image(str(LOGO_PATH), width=210)
+
+        st.markdown(
+            """
+            <div class="landing-title">Reputation Dashboard</div>
+
+            <div class="landing-subtitle">
+                This application analyzes the online reputation of major technology companies
+                based on public Reddit discussions. It combines machine learning, rule-based sentiment analysis,
+                transformer-based inference, and LLM-generated business interpretation.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        if st.button("Explore reputation analysis", type="primary"):
+            st.session_state.entered_app = True
+            st.rerun()
+
+        st.markdown(
+            """
+            <div class="landing-card">
+                <strong>Bachelor's thesis project</strong><br>
+                CSIE · Economic Informatics<br>
+                Coordinator: Ramona Bologa
+            </div>
+
+            <div class="landing-footer">
+                2026 · Irina Atodiresei · GitHub: IrinaAtodiresei/licenta-reputation
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    st.stop()
 
 # ------------------------------------------------------------
 # SIDEBAR
 # ------------------------------------------------------------
 st.sidebar.title("Controls")
+
+if LOGO_PATH.exists():
+    st.sidebar.image(str(LOGO_PATH), width=130)
 
 st.sidebar.caption(
     "Choose a sentiment analysis method and optionally filter the results by company."
