@@ -1077,15 +1077,27 @@ else:
 st.markdown(
     """
     <style>
+    /* Scoate padding-ul default de sus din Streamlit */
+    .block-container {
+        padding-top: 1rem !important;
+    }
+
+    header {
+        visibility: hidden;
+    }
+
     .app-header {
         display: flex;
-        justify-content: center;
+        justify-content: flex-start;  /* LEFT */
         align-items: center;
-        margin-top: -10px;
-        margin-bottom: 10px;
+        margin-top: -20px;   /* taie spațiul de sus */
+        margin-bottom: -10px; /* taie spațiul de jos */
     }
+
     .app-header img {
-        height: 65px;
+        height: 50px;
+        margin: 0;
+        padding: 0;
     }
     </style>
     """,
