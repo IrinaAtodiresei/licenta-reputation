@@ -788,16 +788,25 @@ if not st.session_state.entered_app:
             margin: 0 auto 1.5rem auto;
             text-align: center;
         }
+        
+        .landing-logo {
+            width: 260px;
+            max-width: 70%;
+            height: auto;
+            display: block;
+            margin: 0 auto 12px auto;
+        }
 
-        .landing-card {
+       .landing-card {
             background: #f8fafc;
             border: 1px solid #e5e7eb;
             border-radius: 22px;
-            padding: 22px 34px;
-            margin-top: 26px;
+            padding: 18px 28px;
+            margin: 26px auto 0 auto;
             color: #374151;
             box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-            text-align: center;
+            text-align: left;
+            width: 330px;
         }
 
         .landing-footer {
@@ -1104,23 +1113,6 @@ st.markdown(
         padding: 0 !important;
     }
     
-        .landing-logo {
-            width: 360px;
-            height: auto;
-            display: block;
-            margin: 0 auto 10px auto;
-        }
-        
-        .landing-title {
-            text-align: center;
-        }
-        
-        .landing-card {
-            max-width: 820px;
-            margin: 26px auto 0 auto;
-            text-align: center;
-            transform: translateX(0);
-        }
     </style>
     """,
     unsafe_allow_html=True
