@@ -14,7 +14,7 @@ import numpy as np
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from transformers import pipeline
 from groq import Groq
-
+import time
 
 # ------------------------------------------------------------
 # CONFIG
@@ -867,20 +867,60 @@ neutral_count = int(summary["neutrals"].sum()) if not summary.empty and "neutral
 if "last_selected_company" not in st.session_state:
     st.session_state.last_selected_company = company
 
-if st.session_state.last_selected_company != company:
+if "last_selected_method" not in st.session_state:
+    st.session_state.last_selected_method = method_name
+
+
+company_changed = st.session_state.last_selected_company != company
+method_changed = st.session_state.last_selected_method != method_name
+
+if company_changed or method_changed:
     if company == "All":
-        st.toast(
-            f"Analyzing Apple, Samsung, and Google based on {format_thousands_dot(total_mentions)} real Reddit mentions.",
-            icon="🔎"
+        temporary_message = (
+            f"Analyzing Apple, Samsung, and Google based on "
+            f"{format_thousands_dot(total_mentions)} real Reddit mentions."
         )
     else:
-        st.toast(
-            f"Analyzing {company}'s reputation based on {format_thousands_dot(total_mentions)} real Reddit mentions.",
-            icon="🔎"
+        temporary_message = (
+            f"Analyzing {company}'s reputation based on "
+            f"{format_thousands_dot(total_mentions)} real Reddit mentions."
         )
 
-    st.session_state.last_selected_company = company
+    if method_changed:
+        temporary_message += f" Selected method: {method_name}."
 
+    message_placeholder = st.empty()
+
+    message_placeholder.markdown(
+        f"""
+        <div style="
+            position: fixed;
+            top: 38%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            background: #e8f5e9;
+            color: #065f46;
+            border: 2px solid #86efac;
+            border-radius: 18px;
+            padding: 28px 38px;
+            font-size: 26px;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: 0 12px 35px rgba(0,0,0,0.18);
+            max-width: 760px;
+        ">
+            🔎 {temporary_message}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    time.sleep(2.2)
+    message_placeholder.empty()
+
+    st.session_state.last_selected_company = company
+    st.session_state.last_selected_method = method_name
 if not comparison_company.empty:
     if "different_mentions" in comparison_company.columns and "total_mentions" in comparison_company.columns:
         total_different = comparison_company["different_mentions"].sum()
