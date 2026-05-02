@@ -1104,43 +1104,23 @@ st.markdown(
         padding: 0 !important;
     }
     
-     .landing-center {
-            max-width: 720px;
-            margin: 0 auto;
-            text-align: center;
-            animation: fadeIn 0.8s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(14px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
         .landing-logo {
-            width: 440px;
+            width: 360px;
             height: auto;
-            margin-bottom: 18px;
+            display: block;
+            margin: 0 auto 10px auto;
+        }
+        
+        .landing-title {
+            text-align: center;
         }
         
         .landing-card {
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 22px;
-            padding: 22px 34px;
-            margin: 26px auto 0 auto;
-            color: #374151;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-            text-align: center;
             max-width: 820px;
-            transform: translateX(-12px);
+            margin: 26px auto 0 auto;
+            text-align: center;
+            transform: translateX(0);
         }
-        
     </style>
     """,
     unsafe_allow_html=True
