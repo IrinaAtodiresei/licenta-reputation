@@ -802,11 +802,13 @@ if not st.session_state.entered_app:
             border: 1px solid #e5e7eb;
             border-radius: 22px;
             padding: 18px 28px;
-            margin: 26px auto 0 auto;
+            margin-top: 26px;
             color: #374151;
             box-shadow: 0 10px 30px rgba(0,0,0,0.06);
             text-align: left;
             width: 330px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .landing-footer {
