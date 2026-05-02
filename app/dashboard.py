@@ -44,6 +44,7 @@ MANUAL_CM_PATH = EVAL_DIR / "reddit_manual_validation_confusion_matrix.csv"
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 LOGO_PATH = BASE_DIR / "app" / "assets" / "logo.png"
+LANDING_LOGO_PATH = BASE_DIR / "app" / "assets" / "img2.png"
 
 
 # ------------------------------------------------------------
@@ -818,16 +819,18 @@ if not st.session_state.entered_app:
 
     st.markdown('<div class="landing-center">', unsafe_allow_html=True)
 
-    logo_html = ""
-    if LOGO_PATH.exists():
-        logo_html = f'<img src="data:image/png;base64,{base64.b64encode(open(LOGO_PATH, "rb").read()).decode()}" style="width:70px; margin-right:15px;">'
+    landing_logo_html = ""
+    if LANDING_LOGO_PATH.exists():
+        landing_logo_html = f'''
+        <img src="data:image/png;base64,{base64.b64encode(open(LANDING_LOGO_PATH, "rb").read()).decode()}"
+             style="width:520px; max-width:100%; display:block; margin:0 auto 10px auto;">
+        '''
 
     st.markdown(
         f"""
-        <div style="display:flex; align-items:center; justify-content:center; gap:15px;">
-            {logo_html}
-            <div class="landing-title" style="margin:0;">Reputation Dashboard</div>
-        </div>
+        {landing_logo_html}
+
+        <div class="landing-title">Reputation Dashboard</div>
 
         <div class="landing-subtitle">
             This application analyzes the online reputation of major technology companies
@@ -849,7 +852,7 @@ if not st.session_state.entered_app:
         <div class="landing-card">
             <strong>Bachelor's thesis project</strong><br>
             CSIE · Economic Informatics<br>
-            Coordinator: Ramona Bologa
+            Coordinator: Ana Ramona Bologa
         </div>
 
         <div class="landing-footer">
