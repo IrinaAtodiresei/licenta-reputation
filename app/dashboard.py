@@ -43,8 +43,8 @@ MANUAL_REPORT_PATH = EVAL_DIR / "reddit_manual_validation_report.csv"
 MANUAL_CM_PATH = EVAL_DIR / "reddit_manual_validation_confusion_matrix.csv"
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-LOGO_PATH = BASE_DIR / "app" / "assets" / "logo.png"
-LANDING_LOGO_PATH = BASE_DIR / "app" / "assets" / "img2.png"
+LOGO_PATH = BASE_DIR / "app" / "assets" / "img2.png"
+LANDING_LOGO_PATH = BASE_DIR / "app" / "assets" / "logo.png"
 
 
 # ------------------------------------------------------------
