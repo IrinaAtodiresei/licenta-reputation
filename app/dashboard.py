@@ -1048,22 +1048,20 @@ else:
 # ------------------------------------------------------------
 # HEADER
 # ------------------------------------------------------------
-tab_dashboard, tab_ai, tab_demo, tab_source = st.tabs([
-    "Dashboard",
-    "AI insights",
-    "Interactive model demo",
-    "Proof of source"
-])
+header_logo_col, header_tabs_col = st.columns([0.08, 0.92])
 
-if LOGO_PATH.exists():
-    st.markdown(
-        """
-        <div style="display:flex; justify-content:flex-start; margin-top: 12px; margin-bottom: 10px;">
-        """,
-        unsafe_allow_html=True
-    )
-    st.image(str(LOGO_PATH), width=95)
-    st.markdown("</div>", unsafe_allow_html=True)
+with header_logo_col:
+    if LOGO_PATH.exists():
+        st.image(str(LOGO_PATH), width=62)
+
+with header_tabs_col:
+    tab_dashboard, tab_ai, tab_demo, tab_source = st.tabs([
+        "Dashboard",
+        "AI insights",
+        "Interactive model demo",
+        "Proof of source"
+    ])
+
 # ===================== DASHBOARD TAB =====================
 with tab_dashboard:
 
