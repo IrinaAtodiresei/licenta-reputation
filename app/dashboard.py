@@ -109,37 +109,60 @@ def generate_llm_business_insight(company, method_name, summary_df, negative_df)
 
         negative_examples_text = "\n".join(examples)
 
-    prompt = f"""
-You are a business analyst specialized in online reputation and sentiment analysis.
+    if company == "All":
+        analysis_scope = (
+            "The selected filter includes all companies: Apple, Samsung, and Google. "
+            "Do not write as if there is one CEO for all companies. "
+            "Interpret the results as a comparative market-level overview across the three companies. "
+            "When giving recommendations, write them for analysts, stakeholders, or brand managers, not for a single CEO."
+        )
 
-Analyze the following Reddit sentiment results and generate a clear executive interpretation.
+        recommendation_title = "Strategic recommendations for stakeholders"
+    else:
+        analysis_scope = (
+            f"The selected filter focuses only on {company}. "
+            f"Write the interpretation as company-specific reputation analysis for {company}."
+        )
 
-Company filter: {company}
-Sentiment method: {method_name}
+        recommendation_title = "Strategic recommendation for a CEO or stakeholder"
 
-Aggregated metrics:
-- Total mentions: {total_mentions}
-- Positive mentions: {positives}
-- Neutral mentions: {neutrals}
-- Negative mentions: {negatives}
-- Average model score/confidence: {avg_score:.4f}
-- Negative percentage: {pct_negative:.2f}%
+        prompt = f"""
+    You are a business analyst specialized in online reputation and sentiment analysis.
 
-Most negative Reddit examples:
-{negative_examples_text}
+    Analyze the following Reddit sentiment results and generate a clear executive interpretation.
 
-Write the answer in English.
+    Analysis scope:
+    {analysis_scope}
 
-Structure:
-1. Executive summary
-2. Main reputation risks
-3. Possible reasons behind negative sentiment
-4. Strategic recommendation for a CEO or stakeholder
+    Company filter: {company}
+    Sentiment method: {method_name}
 
-Keep it concise, academic, and business-oriented.
-Do not invent facts that are not supported by the examples.
-"""
+    Aggregated metrics:
+    - Total mentions: {total_mentions}
+    - Positive mentions: {positives}
+    - Neutral mentions: {neutrals}
+    - Negative mentions: {negatives}
+    - Average model score/confidence: {avg_score:.4f}
+    - Negative percentage: {pct_negative:.2f}%
 
+    Most negative Reddit examples:
+    {negative_examples_text}
+
+    Write the answer in English.
+
+    Structure:
+    1. Executive summary
+    2. Main reputation risks
+    3. Possible reasons behind negative sentiment
+    4. {recommendation_title}
+
+    Rules:
+    - If company filter is All, do not treat Apple, Samsung, and Google as one company.
+    - If company filter is All, compare the companies at portfolio / market level.
+    - If company filter is All, avoid phrases like "the CEO should" or "the company should".
+    - Do not invent facts that are not supported by the metrics or examples.
+    - Keep it concise, academic, and business-oriented.
+    """
     response = client.chat.completions.create(
         model="llama-3.1-8b-instant",
         messages=[
