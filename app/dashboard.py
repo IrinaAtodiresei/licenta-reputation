@@ -401,71 +401,72 @@ def fetch_live_reddit_pipeline_sample(comments_per_company=20):
             if len(company_rows) >= comments_per_company:
                 break
 
-            for keyword in config["keywords"]:
+            posts_url = f"https://www.reddit.com/r/{subreddit}/new.json?limit=15"
+            posts_data = fetch_reddit_json(posts_url)
+
+            if not posts_data:
+                continue
+
+            posts = posts_data.get("data", {}).get("children", [])
+
+            for post_item in posts:
                 if len(company_rows) >= comments_per_company:
                     break
 
-                search_url = (
-                    f"https://www.reddit.com/r/{subreddit}/search.json"
-                    f"?q={quote(keyword)}&restrict_sr=1&sort=new&limit=8"
-                )
+                post = post_item.get("data", {})
+                post_id = post.get("id")
+                post_title = post.get("title", "")
+                post_selftext = post.get("selftext", "")
 
-                search_data = fetch_reddit_json(search_url)
-
-                if not search_data:
+                if not post_id:
                     continue
 
-                posts = search_data.get("data", {}).get("children", [])
+                post_text = f"{post_title} {post_selftext}".lower()
 
-                for post_item in posts:
+                if not any(keyword.lower() in post_text for keyword in config["keywords"]):
+                    continue
+
+                comments_url = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json?limit=50"
+                comments_data = fetch_reddit_json(comments_url)
+
+                if not comments_data or not isinstance(comments_data, list) or len(comments_data) < 2:
+                    continue
+
+                comment_items = comments_data[1].get("data", {}).get("children", [])
+                comments = flatten_pipeline_comments(comment_items, max_comments=20)
+
+                for comment in comments:
                     if len(company_rows) >= comments_per_company:
                         break
 
-                    post = post_item.get("data", {})
-                    post_id = post.get("id")
-                    post_title = post.get("title", "")
+                    comment_id = comment.get("id")
+                    body = comment.get("body", "")
 
-                    if not post_id:
+                    if not comment_id or comment_id in seen_comment_ids:
                         continue
 
-                    comments_url = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json?limit=30"
-                    comments_data = fetch_reddit_json(comments_url)
-
-                    if not comments_data or not isinstance(comments_data, list) or len(comments_data) < 2:
+                    if not body or body in ["[deleted]", "[removed]"]:
                         continue
 
-                    comment_items = comments_data[1].get("data", {}).get("children", [])
-                    comments = flatten_pipeline_comments(comment_items, max_comments=15)
+                    seen_comment_ids.add(comment_id)
 
-                    for comment in comments:
-                        if len(company_rows) >= comments_per_company:
-                            break
+                    permalink = comment.get("permalink")
+                    reddit_url = f"https://www.reddit.com{permalink}" if permalink else ""
 
-                        comment_id = comment.get("id")
-                        body = comment.get("body", "")
+                    row = {
+                        "company_name": company_name,
+                        "subreddit": subreddit,
+                        "keyword": ", ".join(config["keywords"]),
+                        "post_id": post_id,
+                        "comment_id": comment_id,
+                        "title": post_title,
+                        "comment_text": body,
+                        "author": comment.get("author", ""),
+                        "created_utc": comment.get("created_utc", ""),
+                        "reddit_url": reddit_url,
+                    }
 
-                        if not comment_id or comment_id in seen_comment_ids:
-                            continue
-
-                        seen_comment_ids.add(comment_id)
-
-                        permalink = comment.get("permalink")
-                        reddit_url = f"https://www.reddit.com{permalink}" if permalink else ""
-
-                        row = {
-                            "company_name": company_name,
-                            "subreddit": subreddit,
-                            "keyword": keyword,
-                            "post_id": post_id,
-                            "comment_id": comment_id,
-                            "title": post_title,
-                            "comment_text": body,
-                            "author": comment.get("author", ""),
-                            "created_utc": comment.get("created_utc", ""),
-                            "reddit_url": reddit_url,
-                        }
-
-                        company_rows.append(row)
+                    company_rows.append(row)
 
         rows.extend(company_rows)
 
