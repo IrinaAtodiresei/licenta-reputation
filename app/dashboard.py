@@ -1086,16 +1086,28 @@ def render_guide_dialog():
         st.session_state.guide_chat_open = False
         st.rerun()
 
+    st.markdown(
+        """
+        <style>
+        div.floating-help-button {
+            position: fixed !important;
+            right: 20px !important;
+            bottom: 120px !important;  /* 🔥 asta e ~2cm deasupra Manage app */
+            z-index: 999999 !important;
+        }
 
-st.markdown(
-    """
-    <style>
-    .floating-help-button {
-        position: fixed;
-        right: 28px;
-        bottom: 95px;
-        z-index: 10000;
-    }
+        div.floating-help-button > div > button {
+            background: #111827 !important;
+            color: white !important;
+            border-radius: 999px !important;
+            font-weight: 700 !important;
+            box-shadow: 0 14px 35px rgba(0,0,0,0.25) !important;
+            padding: 14px 18px !important;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
     .floating-help-button button {
         background: #111827 !important;
