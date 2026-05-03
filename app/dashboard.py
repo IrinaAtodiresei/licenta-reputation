@@ -52,7 +52,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 LOGO_PATH = BASE_DIR / "app" / "assets" / "img2.png"
 LANDING_LOGO_PATH = BASE_DIR / "app" / "assets" / "logo.png"
 
-FALLBACK_PATH = BASE_DIR / "data" / "fallback_pipeline_sample.csv.csv"
+FALLBACK_PATH = BASE_DIR / "data" / "fallback_pipeline_sample.csv"
 
 def load_fallback_pipeline_sample():
     if FALLBACK_PATH.exists():
