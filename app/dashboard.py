@@ -1082,10 +1082,9 @@ def render_guide_dialog():
         )
         st.rerun()
 
-    if st.button("Close assistant"):
+    if st.button("Close assistant", key="close_guide_dialog_unique"):
         st.session_state.guide_chat_open = False
         st.rerun()
-
 st.markdown(
     """
     <style>
@@ -1109,8 +1108,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-if st.button("💬 Help", key="floating_help_button"):
+if st.button("💬 Help", key="floating_help_button_main_unique"):
     st.session_state.guide_chat_open = True
+    st.rerun()
 
 st.markdown(
     """
