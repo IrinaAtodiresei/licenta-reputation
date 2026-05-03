@@ -52,6 +52,13 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 LOGO_PATH = BASE_DIR / "app" / "assets" / "img2.png"
 LANDING_LOGO_PATH = BASE_DIR / "app" / "assets" / "logo.png"
 
+FALLBACK_PATH = BASE_DIR / "data" / "fallback_pipeline_sample.csv.csv"
+
+def load_fallback_pipeline_sample():
+    if FALLBACK_PATH.exists():
+        return pd.read_csv(FALLBACK_PATH)
+    return pd.DataFrame()
+
 
 # ------------------------------------------------------------
 # DB HELPERS
@@ -358,7 +365,6 @@ def fetch_reddit_json(url):
         response = requests.get(url, headers=REDDIT_HEADERS, timeout=15)
 
         if response.status_code != 200:
-            st.warning(f"Reddit request failed: {response.status_code} | {url}")
             return None
 
         return response.json()
@@ -2376,13 +2382,22 @@ with tab_pipeline:
             )
 
         if raw_pipeline_df.empty:
-            st.error("No live Reddit comments could be collected. Try again later.")
-        else:
-            with st.spinner("Step 2/5 — Running Logistic Regression, VADER, and Transformer sentiment models..."):
-                pipeline_df = classify_pipeline_sample(raw_pipeline_df)
+            st.warning(
+                "Live Reddit collection is temporarily unavailable. "
+                "A cached demonstration sample is used instead."
+            )
 
-            st.session_state["pipeline_df"] = pipeline_df
-            st.success("Live pipeline completed successfully.")
+            raw_pipeline_df = load_fallback_pipeline_sample()
+
+            if raw_pipeline_df.empty:
+                st.error("Fallback sample is missing. Please check the local dataset.")
+                st.stop()
+
+        with st.spinner("Step 2/5 — Running Logistic Regression, VADER, and Transformer sentiment models..."):
+            pipeline_df = classify_pipeline_sample(raw_pipeline_df)
+
+        st.session_state["pipeline_df"] = pipeline_df
+        st.success("Pipeline completed successfully.")
 
     if "pipeline_df" in st.session_state:
         pipeline_df = st.session_state["pipeline_df"]
