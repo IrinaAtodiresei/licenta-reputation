@@ -2471,6 +2471,13 @@ with tab_pipeline:
 
         st.markdown("### Sentiment distribution from live sample")
 
+        for col in ["lr_label", "vader_label", "dl_label"]:
+            if col not in pipeline_df.columns:
+                pipeline_df[col] = "neutral"
+
+        if "comment_id" not in pipeline_df.columns:
+            pipeline_df["comment_id"] = pipeline_df.index.astype(str)
+
         live_distribution = (
             pipeline_df
             .groupby("company_name")
@@ -2484,15 +2491,15 @@ with tab_pipeline:
         )
 
         live_distribution["lr_negative_pct"] = (
-            live_distribution["lr_negative"] / live_distribution["total_comments"] * 100
+                live_distribution["lr_negative"] / live_distribution["total_comments"] * 100
         ).round(2)
 
         live_distribution["vader_negative_pct"] = (
-            live_distribution["vader_negative"] / live_distribution["total_comments"] * 100
+                live_distribution["vader_negative"] / live_distribution["total_comments"] * 100
         ).round(2)
 
         live_distribution["dl_negative_pct"] = (
-            live_distribution["dl_negative"] / live_distribution["total_comments"] * 100
+                live_distribution["dl_negative"] / live_distribution["total_comments"] * 100
         ).round(2)
 
         st.dataframe(live_distribution, use_container_width=True, hide_index=True)
