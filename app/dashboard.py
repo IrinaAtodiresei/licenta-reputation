@@ -1474,15 +1474,21 @@ if LOGO_PATH.exists():
     )
 
 # Tabs BELOW header
-tab_dashboard, tab_ai, tab_demo, tab_pipeline, tab_source = st.tabs([
-    "Dashboard",
-    "AI insights",
-    "Interactive model demo",
-    "Live pipeline",
-    "Proof of source"
-])
+active_tab = st.segmented_control(
+    "Navigation",
+    [
+        "Dashboard",
+        "AI insights",
+        "Interactive model demo",
+        "Live pipeline",
+        "Proof of source",
+    ],
+    default="Dashboard",
+    label_visibility="collapsed",
+    key="active_tab"
+)
 # ===================== DASHBOARD TAB =====================
-with tab_dashboard:
+if active_tab == "Dashboard":
 
     st.title("Reputation & Sentiment Dashboard")
 
@@ -2022,7 +2028,7 @@ with tab_dashboard:
             st.info(manual_text)
 
 # ===================== AI INSIGHTS TAB =====================
-with tab_ai:
+if active_tab == "AI insights":
     st.title("AI-generated business insights")
 
     st.markdown("""
@@ -2143,7 +2149,7 @@ with tab_ai:
     )
 
 # ===================== INTERACTIVE DEMO TAB =====================
-with tab_demo:
+if active_tab == "Interactive model demo":
     st.title("How the sentiment models work")
 
     st.markdown("""
@@ -2317,7 +2323,7 @@ with tab_demo:
 
 
 # ===================== LIVE PIPELINE TAB =====================
-with tab_pipeline:
+if active_tab == "Live pipeline":
     st.title("Live Reddit pipeline demo")
 
     st.markdown("""
@@ -2495,7 +2501,7 @@ with tab_pipeline:
         st.info("Press the button to run a new temporary Reddit pipeline sample.")
 
 # ===================== PROOF OF SOURCE TAB =====================
-with tab_source:
+if active_tab == "Proof of source":
     st.title("Proof of source")
 
     st.markdown("""
