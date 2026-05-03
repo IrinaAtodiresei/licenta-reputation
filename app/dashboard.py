@@ -354,12 +354,18 @@ PIPELINE_COMPANIES = {
 
 
 def fetch_reddit_json(url):
-    response = requests.get(url, headers=REDDIT_HEADERS, timeout=15)
+    try:
+        response = requests.get(url, headers=REDDIT_HEADERS, timeout=15)
 
-    if response.status_code != 200:
+        if response.status_code != 200:
+            st.warning(f"Reddit request failed: {response.status_code} | {url}")
+            return None
+
+        return response.json()
+
+    except Exception as e:
+        st.warning(f"Reddit request exception: {e}")
         return None
-
-    return response.json()
 
 
 def flatten_pipeline_comments(items, max_comments):

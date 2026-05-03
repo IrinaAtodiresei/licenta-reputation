@@ -63,7 +63,7 @@
     "Python.train_sentiment140.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "landing-page-logo",
+    "git-widget-placeholder": "feature/live-pipeline-tab",
     "settings.editor.selected.configurable": "preferences.lookFeel"
   }
 }]]></component>
