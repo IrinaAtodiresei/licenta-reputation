@@ -18,7 +18,6 @@ import time
 import base64
 
 import requests
-from urllib.parse import quote
 
 # ------------------------------------------------------------
 # CONFIG
@@ -423,8 +422,7 @@ def fetch_live_reddit_pipeline_sample(comments_per_company=20):
 
                 post_text = f"{post_title} {post_selftext}".lower()
 
-                if not any(keyword.lower() in post_text for keyword in config["keywords"]):
-                    continue
+
 
                 comments_url = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json?limit=50"
                 comments_data = fetch_reddit_json(comments_url)
@@ -446,6 +444,11 @@ def fetch_live_reddit_pipeline_sample(comments_per_company=20):
                         continue
 
                     if not body or body in ["[deleted]", "[removed]"]:
+                        continue
+
+                    full_text = f"{post_title} {post_selftext} {body}".lower()
+
+                    if not any(keyword.lower() in full_text for keyword in config["keywords"]):
                         continue
 
                     seen_comment_ids.add(comment_id)
