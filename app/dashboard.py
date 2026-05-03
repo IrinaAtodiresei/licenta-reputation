@@ -1088,20 +1088,21 @@ def render_guide_dialog():
 st.markdown(
     """
     <style>
-    div[data-testid="stButton"]:has(button#help-floating-btn) {
+    div.st-key-floating_help_button_main_unique {
         position: fixed !important;
-        right: 20px !important;
-        bottom: 90px !important;  /* 🔥 aici e cheia */
+        right: 22px !important;
+        bottom: 92px !important;
         z-index: 999999 !important;
     }
 
-    button#help-floating-btn {
+    div.st-key-floating_help_button_main_unique button {
         background: #111827 !important;
         color: white !important;
         border-radius: 999px !important;
         font-weight: 700 !important;
         box-shadow: 0 14px 35px rgba(0,0,0,0.25) !important;
-        padding: 14px 18px !important;
+        padding: 14px 20px !important;
+        border: none !important;
     }
     </style>
     """,
@@ -1112,19 +1113,7 @@ if st.button("💬 Help", key="floating_help_button_main_unique"):
     st.session_state.guide_chat_open = True
     st.rerun()
 
-st.markdown(
-    """
-    <script>
-    const buttons = window.parent.document.querySelectorAll('button');
-    buttons.forEach(btn => {
-        if (btn.innerText.trim() === '💬 Help') {
-            btn.id = 'help-floating-btn';
-        }
-    });
-    </script>
-    """,
-    unsafe_allow_html=True
-)
+
 
 if st.session_state.guide_chat_open:
     render_guide_dialog()
