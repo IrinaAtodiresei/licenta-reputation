@@ -27,7 +27,11 @@ if not PG_DSN:
     st.error("PG_DSN lipsește. Setează-l în Streamlit Cloud → Settings → Secrets")
     st.stop()
 
-st.set_page_config(page_title="Reputation Dashboard", layout="wide")
+st.set_page_config(
+    page_title="Reputation Dashboard",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 EVAL_DIR = BASE_DIR / "evaluation"
@@ -763,9 +767,6 @@ if not st.session_state.entered_app:
     st.markdown(
         """
         <style>
-        header {
-            visibility: hidden;
-        }
 
         .block-container {
             padding-top: 2rem !important;
