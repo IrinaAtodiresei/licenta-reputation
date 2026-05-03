@@ -17,6 +17,9 @@ from groq import Groq
 import time
 import base64
 
+import requests
+from urllib.parse import quote
+
 # ------------------------------------------------------------
 # CONFIG
 # ------------------------------------------------------------
@@ -308,10 +311,198 @@ def app_guide_answer(question: str):
             "and Proof of source for database transparency."
         )
 
+    if any(word in question for word in ["live", "pipeline", "reddit pipeline", "run live"]):
+        return (
+            "The Live Pipeline simulates the real data collection and analysis process. "
+            "When you run it, the app fetches a small sample of recent Reddit posts and comments "
+            "for Apple, Samsung, and Google. Then it processes the data through the full pipeline: "
+            "data collection, preprocessing, sentiment analysis (Logistic Regression, VADER, Transformer), "
+            "and result visualization. This demonstrates how the system works end-to-end in real time."
+        )
+
+    if any(word in question for word in ["sample", "live data", "real time"]):
+        return (
+            "The Live Pipeline uses a small real-time sample (around 50–100 Reddit comments) "
+            "to keep the execution fast. Each run may return slightly different results "
+            "because the data is fetched live from Reddit."
+        )
+
     return (
         "I can explain the Dashboard, Logistic Regression, VADER, Transformer, AI insights, Proof of source, "
         "manual validation, or disagreement tables. Try asking: 'Explain VADER' or 'What is Proof of source?'"
     )
+
+
+
+REDDIT_HEADERS = {
+    "User-Agent": "script:reputation_dashboard_live_pipeline:v1.0"
+}
+
+PIPELINE_COMPANIES = {
+    "Apple": {
+        "keywords": ["iphone", "apple"],
+        "subreddits": ["apple", "iphone", "applehelp"]
+    },
+    "Samsung": {
+        "keywords": ["samsung", "galaxy"],
+        "subreddits": ["samsung", "galaxy_samsung", "SamsungSupport"]
+    },
+    "Google": {
+        "keywords": ["google", "pixel"],
+        "subreddits": ["google", "GooglePixel", "Android"]
+    }
+}
+
+
+def fetch_reddit_json(url):
+    response = requests.get(url, headers=REDDIT_HEADERS, timeout=15)
+
+    if response.status_code != 200:
+        return None
+
+    return response.json()
+
+
+def flatten_pipeline_comments(items, max_comments):
+    comments = []
+
+    def walk(children):
+        nonlocal comments
+
+        for item in children:
+            if len(comments) >= max_comments:
+                return
+
+            if item.get("kind") != "t1":
+                continue
+
+            data = item.get("data", {})
+            body = data.get("body", "")
+
+            if body and body not in ["[deleted]", "[removed]"]:
+                comments.append(data)
+
+            replies = data.get("replies")
+            if isinstance(replies, dict):
+                walk(replies.get("data", {}).get("children", []))
+
+    walk(items)
+    return comments
+
+
+def fetch_live_reddit_pipeline_sample(comments_per_company=20):
+    rows = []
+    seen_comment_ids = set()
+
+    for company_name, config in PIPELINE_COMPANIES.items():
+        company_rows = []
+
+        for subreddit in config["subreddits"]:
+            if len(company_rows) >= comments_per_company:
+                break
+
+            for keyword in config["keywords"]:
+                if len(company_rows) >= comments_per_company:
+                    break
+
+                search_url = (
+                    f"https://www.reddit.com/r/{subreddit}/search.json"
+                    f"?q={quote(keyword)}&restrict_sr=1&sort=new&limit=8"
+                )
+
+                search_data = fetch_reddit_json(search_url)
+
+                if not search_data:
+                    continue
+
+                posts = search_data.get("data", {}).get("children", [])
+
+                for post_item in posts:
+                    if len(company_rows) >= comments_per_company:
+                        break
+
+                    post = post_item.get("data", {})
+                    post_id = post.get("id")
+                    post_title = post.get("title", "")
+
+                    if not post_id:
+                        continue
+
+                    comments_url = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json?limit=30"
+                    comments_data = fetch_reddit_json(comments_url)
+
+                    if not comments_data or not isinstance(comments_data, list) or len(comments_data) < 2:
+                        continue
+
+                    comment_items = comments_data[1].get("data", {}).get("children", [])
+                    comments = flatten_pipeline_comments(comment_items, max_comments=15)
+
+                    for comment in comments:
+                        if len(company_rows) >= comments_per_company:
+                            break
+
+                        comment_id = comment.get("id")
+                        body = comment.get("body", "")
+
+                        if not comment_id or comment_id in seen_comment_ids:
+                            continue
+
+                        seen_comment_ids.add(comment_id)
+
+                        permalink = comment.get("permalink")
+                        reddit_url = f"https://www.reddit.com{permalink}" if permalink else ""
+
+                        row = {
+                            "company_name": company_name,
+                            "subreddit": subreddit,
+                            "keyword": keyword,
+                            "post_id": post_id,
+                            "comment_id": comment_id,
+                            "title": post_title,
+                            "comment_text": body,
+                            "author": comment.get("author", ""),
+                            "created_utc": comment.get("created_utc", ""),
+                            "reddit_url": reddit_url,
+                        }
+
+                        company_rows.append(row)
+
+        rows.extend(company_rows)
+
+    return pd.DataFrame(rows)
+
+
+def classify_pipeline_sample(df):
+    if df.empty:
+        return df
+
+    result_df = df.copy()
+    result_df["text_for_model"] = (
+        result_df["title"].fillna("") + " " + result_df["comment_text"].fillna("")
+    ).str.strip()
+
+    texts = result_df["text_for_model"].tolist()
+
+    lr_model = load_lr_model()
+    lr_labels = lr_model.predict(texts)
+    lr_probs = lr_model.predict_proba(texts).max(axis=1)
+
+    result_df["lr_label"] = lr_labels
+    result_df["lr_score"] = lr_probs
+
+    vader_analyzer = load_vader_analyzer()
+    vader_scores = [vader_analyzer.polarity_scores(text)["compound"] for text in texts]
+
+    result_df["vader_score"] = vader_scores
+    result_df["vader_label"] = result_df["vader_score"].apply(vader_label_from_score)
+
+    dl_model = load_dl_model()
+    dl_results = dl_model([text[:3000] for text in texts], batch_size=8)
+
+    result_df["dl_label"] = [map_dl_label(item["label"]) for item in dl_results]
+    result_df["dl_score"] = [float(item["score"]) for item in dl_results]
+
+    return result_df
 
 @st.cache_resource
 def load_lr_model():
@@ -837,7 +1028,7 @@ if "guide_messages" not in st.session_state:
         },
         {
             "role": "assistant",
-            "content": "Ask me about the Dashboard, AI insights, Logistic Regression, VADER, Transformer, or Proof of source."
+            "content": "Ask me about the Dashboard, AI insights, Logistic Regression, VADER, Transformer, Live Pipeline (real-time Reddit demo), or Proof of source."
         }
     ]
 if st.query_params.get("chat") == "open":
@@ -1288,10 +1479,11 @@ if LOGO_PATH.exists():
     )
 
 # Tabs BELOW header
-tab_dashboard, tab_ai, tab_demo, tab_source = st.tabs([
+tab_dashboard, tab_ai, tab_demo, tab_pipeline, tab_source = st.tabs([
     "Dashboard",
     "AI insights",
     "Interactive model demo",
+    "Live pipeline",
     "Proof of source"
 ])
 # ===================== DASHBOARD TAB =====================
@@ -2127,6 +2319,167 @@ with tab_demo:
                 "Logistic Regression uses learned word weights, VADER uses lexicon sentiment scores, "
                 "and the Transformer interprets the full sentence context."
             )
+
+
+# ===================== LIVE PIPELINE TAB =====================
+with tab_pipeline:
+    st.title("Live Reddit pipeline demo")
+
+    st.markdown("""
+    This tab demonstrates the complete sentiment analysis pipeline on a small live Reddit sample.
+
+    The process is similar to an order-tracking flow:
+    **collect comments → extract text → identify company → apply sentiment models → display results**.
+    """)
+
+    st.info(
+        "This live demo collects a small temporary sample from Reddit for speed. "
+        "The data is not saved into the PostgreSQL database."
+    )
+
+    comments_per_company = st.slider(
+        "Comments per company",
+        min_value=15,
+        max_value=30,
+        value=20,
+        step=5
+    )
+
+    expected_total = comments_per_company * 3
+    st.caption(f"Expected sample size: approximately {expected_total} comments across Apple, Samsung, and Google.")
+
+    if st.button("Run live Reddit pipeline"):
+        with st.spinner("Step 1/5 — Collecting Reddit comments..."):
+            raw_pipeline_df = fetch_live_reddit_pipeline_sample(
+                comments_per_company=comments_per_company
+            )
+
+        if raw_pipeline_df.empty:
+            st.error("No live Reddit comments could be collected. Try again later.")
+        else:
+            with st.spinner("Step 2/5 — Running Logistic Regression, VADER, and Transformer sentiment models..."):
+                pipeline_df = classify_pipeline_sample(raw_pipeline_df)
+
+            st.session_state["pipeline_df"] = pipeline_df
+            st.success("Live pipeline completed successfully.")
+
+    if "pipeline_df" in st.session_state:
+        pipeline_df = st.session_state["pipeline_df"]
+
+        st.markdown("### Pipeline stages")
+
+        st.markdown(
+            f"""
+            <div style="display: flex; gap: 12px; margin: 20px 0;">
+                <div style="flex:1; padding:16px; border-radius:14px; background:#dcfce7; border:1px solid #86efac;">
+                    <strong>1. Collect</strong><br>
+                    Reddit JSON API
+                </div>
+                <div style="flex:1; padding:16px; border-radius:14px; background:#dcfce7; border:1px solid #86efac;">
+                    <strong>2. Extract</strong><br>
+                    Comments only
+                </div>
+                <div style="flex:1; padding:16px; border-radius:14px; background:#dcfce7; border:1px solid #86efac;">
+                    <strong>3. Map</strong><br>
+                    Apple / Samsung / Google
+                </div>
+                <div style="flex:1; padding:16px; border-radius:14px; background:#dcfce7; border:1px solid #86efac;">
+                    <strong>4. Analyze</strong><br>
+                    LR + VADER + Transformer
+                </div>
+                <div style="flex:1; padding:16px; border-radius:14px; background:#dcfce7; border:1px solid #86efac;">
+                    <strong>5. Result</strong><br>
+                    Dashboard preview
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        st.markdown("### Live sample overview")
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        col1.metric("Collected comments", len(pipeline_df))
+        col2.metric("Companies", pipeline_df["company_name"].nunique())
+        col3.metric("Subreddits", pipeline_df["subreddit"].nunique())
+        col4.metric("Models applied", "3")
+
+        st.markdown("### Comments collected per company")
+
+        company_counts = (
+            pipeline_df["company_name"]
+            .value_counts()
+            .rename_axis("company_name")
+            .reset_index(name="comments")
+        )
+
+        st.dataframe(company_counts, use_container_width=True, hide_index=True)
+        st.bar_chart(company_counts.set_index("company_name"))
+
+        st.markdown("### Sentiment result preview")
+
+        display_cols = [
+            "company_name",
+            "subreddit",
+            "keyword",
+            "title",
+            "comment_text",
+            "lr_label",
+            "vader_label",
+            "dl_label",
+        ]
+
+        st.dataframe(
+            pipeline_df[display_cols],
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.markdown("### Sentiment distribution from live sample")
+
+        live_distribution = (
+            pipeline_df
+            .groupby("company_name")
+            .agg(
+                total_comments=("comment_id", "count"),
+                lr_negative=("lr_label", lambda x: (x == "negative").sum()),
+                vader_negative=("vader_label", lambda x: (x == "negative").sum()),
+                dl_negative=("dl_label", lambda x: (x == "negative").sum()),
+            )
+            .reset_index()
+        )
+
+        live_distribution["lr_negative_pct"] = (
+            live_distribution["lr_negative"] / live_distribution["total_comments"] * 100
+        ).round(2)
+
+        live_distribution["vader_negative_pct"] = (
+            live_distribution["vader_negative"] / live_distribution["total_comments"] * 100
+        ).round(2)
+
+        live_distribution["dl_negative_pct"] = (
+            live_distribution["dl_negative"] / live_distribution["total_comments"] * 100
+        ).round(2)
+
+        st.dataframe(live_distribution, use_container_width=True, hide_index=True)
+
+        chart_df = live_distribution.set_index("company_name")[
+            ["lr_negative_pct", "vader_negative_pct", "dl_negative_pct"]
+        ]
+
+        st.bar_chart(chart_df)
+
+        st.markdown("### Academic interpretation")
+
+        st.write(
+            "This live demonstration shows the operational flow of the application on a small Reddit sample. "
+            "The same logic used in the main dashboard is reproduced in a faster, temporary pipeline: Reddit data is collected, "
+            "comments are extracted, each comment is associated with one of the three companies, and sentiment is computed "
+            "using Logistic Regression, VADER, and a Transformer-based model."
+        )
+    else:
+        st.warning("Run the live pipeline to collect and analyze a small Reddit sample.")
 
 # ===================== PROOF OF SOURCE TAB =====================
 with tab_source:
