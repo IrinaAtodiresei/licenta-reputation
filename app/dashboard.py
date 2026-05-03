@@ -1084,7 +1084,7 @@ def render_guide_dialog():
 
     if st.button("Close assistant", key="close_guide_dialog_unique"):
         st.session_state.guide_chat_open = False
-        st.rerun()
+        st.rerun(scope="app")
 st.markdown(
     """
     <style>
@@ -2140,6 +2140,7 @@ with tab_ai:
         )
     else:
         if st.button("Generate AI business insight"):
+            st.session_state.guide_chat_open = False
             with st.spinner("Generating business interpretation with Groq..."):
                 try:
                     insight = generate_llm_business_insight(
@@ -2200,6 +2201,7 @@ with tab_demo:
     )
 
     if st.button("Analyze text"):
+        st.session_state.guide_chat_open = False
         if not user_text.strip():
             st.warning("Please enter a text first.")
         else:
