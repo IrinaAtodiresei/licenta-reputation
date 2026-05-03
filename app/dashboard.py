@@ -1090,22 +1090,35 @@ def render_guide_dialog():
 st.markdown(
     """
     <style>
-    div[data-testid="stButton"] button[kind="secondary"] {
-        border-radius: 999px;
+    .floating-help-button {
+        position: fixed;
+        right: 28px;
+        bottom: 95px;
+        z-index: 10000;
+    }
+
+    .floating-help-button button {
+        background: #111827 !important;
+        color: white !important;
+        border-radius: 999px !important;
+        font-weight: 700 !important;
+        box-shadow: 0 14px 35px rgba(0,0,0,0.25) !important;
+        padding: 14px 18px !important;
     }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-help_col = st.columns([8, 1])[1]
-with help_col:
-    if st.button("💬 Help"):
-        st.session_state.guide_chat_open = True
+st.markdown('<div class="floating-help-button">', unsafe_allow_html=True)
+
+if st.button("💬 Help", key="floating_help_button"):
+    st.session_state.guide_chat_open = True
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 if st.session_state.guide_chat_open:
     render_guide_dialog()
-
 
 # ------------------------------------------------------------
 # LANDING PAGE
