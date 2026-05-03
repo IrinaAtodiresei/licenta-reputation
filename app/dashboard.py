@@ -1212,7 +1212,7 @@ st.markdown(
     .floating-chat-btn {
         position: fixed;
         right: 28px;
-        bottom: 28px;
+        bottom: 95px;
         background: #111827;
         color: white !important;
         padding: 14px 18px;
