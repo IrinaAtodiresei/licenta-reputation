@@ -9,3 +9,4 @@ archive_sent140/y_train.pkl
 evaluation/cv_results.csv
 archive_sent140/training.1600000.processed.noemoticon.csv
 *.csv
+!data/fallback_pipeline_sample.csv

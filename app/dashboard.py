@@ -1038,7 +1038,7 @@ if "comparison_rows" not in st.session_state:
     st.session_state.comparison_rows = pd.DataFrame()
 
 if "entered_app" not in st.session_state:
-    st.session_state.entered_app = st.query_params.get("chat") == "open"
+    st.session_state.entered_app = False
 
 if "guide_chat_open" not in st.session_state:
     st.session_state.guide_chat_open = False
@@ -1054,9 +1054,57 @@ if "guide_messages" not in st.session_state:
             "content": "Ask me about the Dashboard, AI insights, Logistic Regression, VADER, Transformer, Live Pipeline (real-time Reddit demo), or Proof of source."
         }
     ]
-if st.query_params.get("chat") == "open":
-    st.session_state.guide_chat_open = True
 
+# ------------------------------------------------------------
+# FLOATING GUIDE CHAT
+# ------------------------------------------------------------
+@st.dialog("Reputation Dashboard Assistant")
+def render_guide_dialog():
+    for msg in st.session_state.guide_messages[-8:]:
+        if msg["role"] == "assistant":
+            st.info(msg["content"])
+        else:
+            st.success(msg["content"])
+
+    with st.form("guide_chat_form", clear_on_submit=True):
+        guide_question = st.text_input(
+            "Ask about the app",
+            placeholder="Example: Explain VADER"
+        )
+        submitted = st.form_submit_button("Send")
+
+    if submitted and guide_question.strip():
+        st.session_state.guide_messages.append(
+            {"role": "user", "content": guide_question}
+        )
+        st.session_state.guide_messages.append(
+            {"role": "assistant", "content": app_guide_answer(guide_question)}
+        )
+        st.rerun()
+
+    if st.button("Close assistant"):
+        st.session_state.guide_chat_open = False
+        st.rerun()
+
+
+st.markdown(
+    """
+    <style>
+    div[data-testid="stButton"] button[kind="secondary"] {
+        border-radius: 999px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+help_col = st.columns([8, 1])[1]
+with help_col:
+    if st.button("💬 Help"):
+        st.session_state.guide_chat_open = True
+
+if st.session_state.guide_chat_open:
+    render_guide_dialog()
 
 
 # ------------------------------------------------------------
@@ -1383,69 +1431,6 @@ if method == "deep_learning_transformer":
     order_direction = "DESC"
 else:
     order_direction = "ASC"
-
-# ------------------------------------------------------------
-# FLOATING GUIDE CHAT - CLEAN VERSION
-# ------------------------------------------------------------
-@st.dialog("Reputation Dashboard Assistant")
-def render_guide_dialog():
-    for msg in st.session_state.guide_messages[-8:]:
-        if msg["role"] == "assistant":
-            st.info(msg["content"])
-        else:
-            st.success(msg["content"])
-
-    with st.form("guide_chat_form", clear_on_submit=True):
-        guide_question = st.text_input(
-            "Ask about the app",
-            placeholder="Example: Explain VADER"
-        )
-        submitted = st.form_submit_button("Send")
-
-    if submitted and guide_question.strip():
-        st.session_state.guide_messages.append(
-            {"role": "user", "content": guide_question}
-        )
-        st.session_state.guide_messages.append(
-            {"role": "assistant", "content": app_guide_answer(guide_question)}
-        )
-        st.rerun()
-
-    if st.button("Close assistant"):
-        st.session_state.guide_chat_open = False
-        st.query_params.clear()
-        st.rerun()
-
-
-if st.query_params.get("chat") == "open":
-    st.session_state.guide_chat_open = True
-
-st.markdown(
-    """
-    <a href="?chat=open" target="_self" class="floating-chat-btn">💬 Help</a>
-
-    <style>
-    .floating-chat-btn {
-        position: fixed;
-        right: 28px;
-        bottom: 95px;
-        background: #111827;
-        color: white !important;
-        padding: 14px 18px;
-        border-radius: 999px;
-        font-weight: 700;
-        text-decoration: none !important;
-        box-shadow: 0 14px 35px rgba(0,0,0,0.25);
-        z-index: 10000;
-        font-size: 0.95rem;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-if st.session_state.guide_chat_open:
-    render_guide_dialog()
 
 # ------------------------------------------------------------
 # HEADER (NEW - above tabs)
@@ -2374,6 +2359,7 @@ with tab_pipeline:
     st.caption(f"Expected sample size: approximately {expected_total} comments across Apple, Samsung, and Google.")
 
     if st.button("Run live Reddit pipeline"):
+        st.session_state.guide_chat_open = False
         st.session_state.pop("pipeline_df", None)
 
         with st.spinner("Step 1/5 — Collecting Reddit comments..."):
