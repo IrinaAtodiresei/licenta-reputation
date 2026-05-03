@@ -1103,17 +1103,17 @@ st.markdown(
         display: flex;
         justify-content: flex-start;
         align-items: center;
-        margin-top: -20px;
+        margin-top: 12px;
         margin-bottom: 5px;
-        background: transparent !important; /* 🔥 scoate gri */
+        background: transparent !important;
     }
 
     .app-header img {
-        height: 110px;   /* 🔥 MARE */
+        height: 90px;
         width: auto;
-        background: transparent !important; /* 🔥 sigur */
+        background: transparent !important;
         display: block;
-    }
+        }
 
     /* 🔥 elimină orice "card" gri din Streamlit */
     div[data-testid="stImage"] {
