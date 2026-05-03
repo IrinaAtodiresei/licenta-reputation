@@ -767,6 +767,10 @@ if not st.session_state.entered_app:
     st.markdown(
         """
         <style>
+        
+        header {
+            visibility: hidden;
+        }
 
         .block-container {
             padding-top: 2rem !important;
@@ -1092,7 +1096,7 @@ st.markdown(
     }
 
     header {
-        visibility: hidden;
+        visibility: visible;
     }
 
     .app-header {
