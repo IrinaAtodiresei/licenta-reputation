@@ -1040,31 +1040,18 @@ if "comparison_rows" not in st.session_state:
 if "entered_app" not in st.session_state:
     st.session_state.entered_app = False
 
-if "guide_chat_open" not in st.session_state:
-    st.session_state.guide_chat_open = False
 
-if "guide_messages" not in st.session_state:
-    st.session_state.guide_messages = [
-        {
-            "role": "assistant",
-            "content": "Hi! I can explain how this reputation analysis app works."
-        },
-        {
-            "role": "assistant",
-            "content": "Ask me about the Dashboard, AI insights, Logistic Regression, VADER, Transformer, Live Pipeline (real-time Reddit demo), or Proof of source."
-        }
-    ]
 
 # ------------------------------------------------------------
 # FLOATING GUIDE CHAT
 # ------------------------------------------------------------
 @st.dialog("Reputation Dashboard Assistant")
 def render_guide_dialog():
-    for msg in st.session_state.guide_messages[-8:]:
-        if msg["role"] == "assistant":
-            st.info(msg["content"])
-        else:
-            st.success(msg["content"])
+    st.info("Hi! I can explain how this reputation analysis app works.")
+    st.info(
+        "Ask me about the Dashboard, AI insights, Logistic Regression, "
+        "VADER, Transformer, Live Pipeline, or Proof of source."
+    )
 
     with st.form("guide_chat_form", clear_on_submit=True):
         guide_question = st.text_input(
@@ -1074,13 +1061,8 @@ def render_guide_dialog():
         submitted = st.form_submit_button("Send")
 
     if submitted and guide_question.strip():
-        st.session_state.guide_messages.append(
-            {"role": "user", "content": guide_question}
-        )
-        st.session_state.guide_messages.append(
-            {"role": "assistant", "content": app_guide_answer(guide_question)}
-        )
-        st.rerun()
+        st.success(guide_question)
+        st.info(app_guide_answer(guide_question))
 
 
 st.markdown(
@@ -1108,12 +1090,6 @@ st.markdown(
 )
 
 if st.button("💬 Help", key="floating_help_button_main_unique"):
-    st.session_state.guide_chat_open = True
-    st.rerun()
-
-
-
-if st.session_state.guide_chat_open:
     render_guide_dialog()
 
 # ------------------------------------------------------------
@@ -2138,7 +2114,6 @@ with tab_ai:
         )
     else:
         if st.button("Generate AI business insight"):
-            st.session_state.guide_chat_open = False
             with st.spinner("Generating business interpretation with Groq..."):
                 try:
                     insight = generate_llm_business_insight(
@@ -2199,7 +2174,6 @@ with tab_demo:
     )
 
     if st.button("Analyze text"):
-        st.session_state.guide_chat_open = False
         if not user_text.strip():
             st.warning("Please enter a text first.")
         else:
@@ -2370,7 +2344,6 @@ with tab_pipeline:
     st.caption(f"Expected sample size: approximately {expected_total} comments across Apple, Samsung, and Google.")
 
     if st.button("Run live Reddit pipeline"):
-        st.session_state.guide_chat_open = False
         st.session_state.pop("pipeline_df", None)
 
         with st.spinner("Step 1/5 — Collecting Reddit comments..."):
