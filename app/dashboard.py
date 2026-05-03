@@ -247,6 +247,72 @@ def render_metrics_grid(metrics, columns=4):
                 unsafe_allow_html=True
             )
 
+def app_guide_answer(question: str):
+    question = question.lower().strip()
+
+    if not question:
+        return "Ask me something about the dashboard, models, AI insights, proof of source, or sentiment analysis."
+
+    if any(word in question for word in ["dashboard", "main page", "overview"]):
+        return (
+            "The Dashboard tab summarizes the collected Reddit mentions, sentiment distribution, "
+            "negative sentiment percentage, company-level statistics, model evaluation, and manual validation."
+        )
+
+    if any(word in question for word in ["logistic", "regression", "lr"]):
+        return (
+            "Logistic Regression is the main machine learning baseline. It transforms text into TF-IDF features "
+            "and predicts whether a mention is positive, neutral, or negative."
+        )
+
+    if "vader" in question:
+        return (
+            "VADER is a rule-based sentiment analyzer. It uses a predefined sentiment lexicon and fixed rules. "
+            "It is fast and interpretable, but it may miss context or sarcasm."
+        )
+
+    if any(word in question for word in ["transformer", "deep learning", "attention"]):
+        return (
+            "The Deep Learning Transformer analyzes the sentence context, not only isolated words. "
+            "It can capture relations between words, which is why the demo includes an attention-style heatmap."
+        )
+
+    if any(word in question for word in ["ai", "insight", "groq", "llm"]):
+        return (
+            "The AI insights tab uses Groq as an interpretation layer. It does not replace the sentiment models; "
+            "it explains the aggregated results from a business and reputation perspective."
+        )
+
+    if any(word in question for word in ["proof", "source", "reddit", "data"]):
+        return (
+            "The Proof of source tab shows the Reddit records stored in PostgreSQL. "
+            "It helps demonstrate transparency by showing the original mention text, author, timestamp, and Reddit metadata."
+        )
+
+    if any(word in question for word in ["disagreement", "different", "compare"]):
+        return (
+            "The disagreement table shows cases where two sentiment methods classify the same Reddit mention differently. "
+            "This is useful because sentiment analysis is subjective and different models can interpret informal text differently."
+        )
+
+    if any(word in question for word in ["manual", "validation", "accuracy", "f1"]):
+        return (
+            "Manual validation compares model predictions with labels manually assigned by the project author. "
+            "This is important because it evaluates the models directly on Reddit data, not only on training datasets."
+        )
+
+    if any(word in question for word in ["how", "use", "start"]):
+        return (
+            "Start with the Dashboard tab, choose a method from the sidebar, then filter by company. "
+            "After that, check AI insights for business interpretation, the demo tab for model explainability, "
+            "and Proof of source for database transparency."
+        )
+
+    return (
+        "I can explain the Dashboard, Logistic Regression, VADER, Transformer, AI insights, Proof of source, "
+        "manual validation, or disagreement tables. Try asking: 'Explain VADER' or 'What is Proof of source?'"
+    )
+
 @st.cache_resource
 def load_lr_model():
     return joblib.load(LR_MODEL_PATH)
@@ -758,7 +824,24 @@ if "comparison_rows" not in st.session_state:
     st.session_state.comparison_rows = pd.DataFrame()
 
 if "entered_app" not in st.session_state:
-    st.session_state.entered_app = False
+    st.session_state.entered_app = st.query_params.get("chat") == "open"
+
+if "guide_chat_open" not in st.session_state:
+    st.session_state.guide_chat_open = False
+
+if "guide_messages" not in st.session_state:
+    st.session_state.guide_messages = [
+        {
+            "role": "assistant",
+            "content": "Hi! I can explain how this reputation analysis app works."
+        },
+        {
+            "role": "assistant",
+            "content": "Ask me about the Dashboard, AI insights, Logistic Regression, VADER, Transformer, or Proof of source."
+        }
+    ]
+if st.query_params.get("chat") == "open":
+    st.session_state.guide_chat_open = True
 
 # ------------------------------------------------------------
 # LANDING PAGE
@@ -1084,6 +1167,70 @@ if method == "deep_learning_transformer":
     order_direction = "DESC"
 else:
     order_direction = "ASC"
+
+# ------------------------------------------------------------
+# FLOATING GUIDE CHAT - CLEAN VERSION
+# ------------------------------------------------------------
+@st.dialog("Reputation Dashboard Assistant")
+def render_guide_dialog():
+    for msg in st.session_state.guide_messages[-8:]:
+        if msg["role"] == "assistant":
+            st.info(msg["content"])
+        else:
+            st.success(msg["content"])
+
+    with st.form("guide_chat_form", clear_on_submit=True):
+        guide_question = st.text_input(
+            "Ask about the app",
+            placeholder="Example: Explain VADER"
+        )
+        submitted = st.form_submit_button("Send")
+
+    if submitted and guide_question.strip():
+        st.session_state.guide_messages.append(
+            {"role": "user", "content": guide_question}
+        )
+        st.session_state.guide_messages.append(
+            {"role": "assistant", "content": app_guide_answer(guide_question)}
+        )
+        st.rerun()
+
+    if st.button("Close assistant"):
+        st.session_state.guide_chat_open = False
+        st.query_params.clear()
+        st.rerun()
+
+
+if st.query_params.get("chat") == "open":
+    st.session_state.guide_chat_open = True
+
+st.markdown(
+    """
+    <a href="?chat=open" target="_self" class="floating-chat-btn">💬 Help</a>
+
+    <style>
+    .floating-chat-btn {
+        position: fixed;
+        right: 28px;
+        bottom: 28px;
+        background: #111827;
+        color: white !important;
+        padding: 14px 18px;
+        border-radius: 999px;
+        font-weight: 700;
+        text-decoration: none !important;
+        box-shadow: 0 14px 35px rgba(0,0,0,0.25);
+        z-index: 10000;
+        font-size: 0.95rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+if st.session_state.guide_chat_open:
+    render_guide_dialog()
+
 # ------------------------------------------------------------
 # HEADER (NEW - above tabs)
 # ------------------------------------------------------------
