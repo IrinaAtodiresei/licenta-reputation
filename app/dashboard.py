@@ -1082,9 +1082,7 @@ def render_guide_dialog():
         )
         st.rerun()
 
-    if st.button("Close assistant", key="close_guide_dialog_unique"):
-        st.session_state.guide_chat_open = False
-        st.rerun(scope="app")
+
 st.markdown(
     """
     <style>
