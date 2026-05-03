@@ -1038,6 +1038,8 @@ if "guide_messages" not in st.session_state:
 if st.query_params.get("chat") == "open":
     st.session_state.guide_chat_open = True
 
+
+
 # ------------------------------------------------------------
 # LANDING PAGE
 # ------------------------------------------------------------
@@ -2353,6 +2355,8 @@ with tab_pipeline:
     st.caption(f"Expected sample size: approximately {expected_total} comments across Apple, Samsung, and Google.")
 
     if st.button("Run live Reddit pipeline"):
+        st.session_state.pop("pipeline_df", None)
+
         with st.spinner("Step 1/5 — Collecting Reddit comments..."):
             raw_pipeline_df = fetch_live_reddit_pipeline_sample(
                 comments_per_company=comments_per_company
@@ -2483,7 +2487,7 @@ with tab_pipeline:
             "using Logistic Regression, VADER, and a Transformer-based model."
         )
     else:
-        st.warning("Run the live pipeline to collect and analyze a small Reddit sample.")
+        st.info("Press the button to run a new temporary Reddit pipeline sample.")
 
 # ===================== PROOF OF SOURCE TAB =====================
 with tab_source:
