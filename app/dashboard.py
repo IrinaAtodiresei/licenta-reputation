@@ -448,8 +448,15 @@ def fetch_live_reddit_pipeline_sample(comments_per_company=20):
 
                     full_text = f"{post_title} {post_selftext} {body}".lower()
 
-                    if not any(keyword.lower() in full_text for keyword in config["keywords"]):
-                        continue
+                    company_specific_subreddits = {
+                        "apple", "iphone", "applehelp",
+                        "samsung", "galaxy_samsung", "samsungsupport",
+                        "google", "googlepixel", "android"
+                    }
+
+                    if subreddit.lower() not in company_specific_subreddits:
+                        if not any(keyword.lower() in full_text for keyword in config["keywords"]):
+                            continue
 
                     seen_comment_ids.add(comment_id)
 
