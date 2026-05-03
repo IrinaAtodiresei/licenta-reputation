@@ -1091,7 +1091,7 @@ st.markdown(
     div[data-testid="stButton"]:has(button#help-floating-btn) {
         position: fixed !important;
         right: 20px !important;
-        bottom: 120px !important;
+        bottom: 90px !important;  /* 🔥 aici e cheia */
         z-index: 999999 !important;
     }
 
@@ -1117,7 +1117,7 @@ st.markdown(
     <script>
     const buttons = window.parent.document.querySelectorAll('button');
     buttons.forEach(btn => {
-        if (btn.innerText.includes('Help')) {
+        if (btn.innerText.trim() === '💬 Help') {
             btn.id = 'help-floating-btn';
         }
     });
