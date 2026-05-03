@@ -1089,14 +1089,14 @@ def render_guide_dialog():
 st.markdown(
     """
     <style>
-    div[data-testid="stButton"]:has(button[kind="secondary"]) {
+    div[data-testid="stButton"]:has(button#help-floating-btn) {
         position: fixed !important;
         right: 20px !important;
         bottom: 120px !important;
         z-index: 999999 !important;
     }
 
-    div[data-testid="stButton"]:has(button[kind="secondary"]) button {
+    button#help-floating-btn {
         background: #111827 !important;
         color: white !important;
         border-radius: 999px !important;
@@ -1112,15 +1112,19 @@ st.markdown(
 if st.button("💬 Help", key="floating_help_button"):
     st.session_state.guide_chat_open = True
 
-if st.session_state.guide_chat_open:
-    render_guide_dialog()
-
-st.markdown('<div class="floating-help-button">', unsafe_allow_html=True)
-
-if st.button("💬 Help", key="floating_help_button"):
-    st.session_state.guide_chat_open = True
-
-st.markdown('</div>', unsafe_allow_html=True)
+st.markdown(
+    """
+    <script>
+    const buttons = window.parent.document.querySelectorAll('button');
+    buttons.forEach(btn => {
+        if (btn.innerText.includes('Help')) {
+            btn.id = 'help-floating-btn';
+        }
+    });
+    </script>
+    """,
+    unsafe_allow_html=True
+)
 
 if st.session_state.guide_chat_open:
     render_guide_dialog()
