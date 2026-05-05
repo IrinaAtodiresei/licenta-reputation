@@ -340,9 +340,61 @@ def app_guide_answer(question: str):
 
 
 
-REDDIT_HEADERS = {
-    "User-Agent": "script:reputation_dashboard_live_pipeline:v1.0"
+REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
+REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
+REDDIT_USER_AGENT = os.getenv(
+    "REDDIT_USER_AGENT",
+    "script:reputation_dashboard_live_pipeline:v2.0 by u/vibin_n_thrivin_"
+)
+
+_reddit_token_cache = {
+    "access_token": None,
+    "expires_at": 0
 }
+
+
+def get_reddit_access_token():
+    if not REDDIT_CLIENT_ID or not REDDIT_CLIENT_SECRET:
+        st.warning("Lipsesc REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET.")
+        return None
+
+    now = time.time()
+
+    if _reddit_token_cache["access_token"] and now < _reddit_token_cache["expires_at"]:
+        return _reddit_token_cache["access_token"]
+
+    auth = requests.auth.HTTPBasicAuth(REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET)
+
+    response = requests.post(
+        "https://www.reddit.com/api/v1/access_token",
+        auth=auth,
+        data={"grant_type": "client_credentials"},
+        headers={"User-Agent": REDDIT_USER_AGENT},
+        timeout=15
+    )
+
+    if response.status_code != 200:
+        st.warning(f"Reddit OAuth failed: {response.status_code}")
+        return None
+
+    token_data = response.json()
+
+    _reddit_token_cache["access_token"] = token_data["access_token"]
+    _reddit_token_cache["expires_at"] = now + int(token_data.get("expires_in", 3600)) - 60
+
+    return _reddit_token_cache["access_token"]
+
+
+def get_reddit_headers():
+    token = get_reddit_access_token()
+
+    if not token:
+        return None
+
+    return {
+        "Authorization": f"Bearer {token}",
+        "User-Agent": REDDIT_USER_AGENT
+    }
 
 PIPELINE_COMPANIES = {
     "Apple": {
@@ -361,10 +413,25 @@ PIPELINE_COMPANIES = {
 
 
 def fetch_reddit_json(url):
+    headers = get_reddit_headers()
+
+    if headers is None:
+        return None
+
     try:
-        response = requests.get(url, headers=REDDIT_HEADERS, timeout=15)
+        response = requests.get(url, headers=headers, timeout=15)
+
+        if response.status_code == 401:
+            _reddit_token_cache["access_token"] = None
+            headers = get_reddit_headers()
+
+            if headers is None:
+                return None
+
+            response = requests.get(url, headers=headers, timeout=15)
 
         if response.status_code != 200:
+            st.warning(f"Reddit request failed: {response.status_code}")
             return None
 
         return response.json()
@@ -372,7 +439,6 @@ def fetch_reddit_json(url):
     except Exception as e:
         st.warning(f"Reddit request exception: {e}")
         return None
-
 
 def flatten_pipeline_comments(items, max_comments):
     comments = []
@@ -412,7 +478,7 @@ def fetch_live_reddit_pipeline_sample(comments_per_company=20):
             if len(company_rows) >= comments_per_company:
                 break
 
-            posts_url = f"https://www.reddit.com/r/{subreddit}/new.json?limit=15"
+            posts_url = f"https://oauth.reddit.com/r/{subreddit}/new?limit=15"
             posts_data = fetch_reddit_json(posts_url)
 
             if not posts_data:
@@ -434,9 +500,7 @@ def fetch_live_reddit_pipeline_sample(comments_per_company=20):
 
                 post_text = f"{post_title} {post_selftext}".lower()
 
-
-
-                comments_url = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json?limit=50"
+                comments_url = f"https://oauth.reddit.com/r/{subreddit}/comments/{post_id}?limit=50"
                 comments_data = fetch_reddit_json(comments_url)
 
                 if not comments_data or not isinstance(comments_data, list) or len(comments_data) < 2:
