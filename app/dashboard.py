@@ -22,7 +22,10 @@ import requests
 # ------------------------------------------------------------
 # CONFIG
 # ------------------------------------------------------------
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent
+ENV_PATH = BASE_DIR / "app" / ".env"
+
+load_dotenv(ENV_PATH)
 
 PG_DSN = os.getenv("PG_DSN")
 if not PG_DSN:
@@ -339,10 +342,13 @@ def app_guide_answer(question: str):
     )
 
 
+REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
+REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
+REDDIT_USER_AGENT = os.getenv(
+    "REDDIT_USER_AGENT",
+    "script:reputation_dashboard_live_pipeline:v1.0"
+)
 
-REDDIT_HEADERS = {
-    "User-Agent": "script:reputation_dashboard_live_pipeline:v1.0"
-}
 
 PIPELINE_COMPANIES = {
     "Apple": {
@@ -360,11 +366,64 @@ PIPELINE_COMPANIES = {
 }
 
 
-def fetch_reddit_json(url):
+@st.cache_data(ttl=3300)
+def get_reddit_access_token():
+    if not REDDIT_CLIENT_ID or not REDDIT_CLIENT_SECRET:
+        return None
+
+    auth = requests.auth.HTTPBasicAuth(
+        REDDIT_CLIENT_ID,
+        REDDIT_CLIENT_SECRET
+    )
+
+    data = {
+        "grant_type": "client_credentials"
+    }
+
+    headers = {
+        "User-Agent": REDDIT_USER_AGENT
+    }
+
     try:
-        response = requests.get(url, headers=REDDIT_HEADERS, timeout=15)
+        response = requests.post(
+            "https://www.reddit.com/api/v1/access_token",
+            auth=auth,
+            data=data,
+            headers=headers,
+            timeout=15
+        )
 
         if response.status_code != 200:
+            st.warning(f"Reddit OAuth failed: {response.status_code} - {response.text[:300]}")
+            return None
+
+        token_data = response.json()
+        return token_data.get("access_token")
+
+    except Exception as e:
+        st.warning(f"Reddit OAuth exception: {e}")
+        return None
+
+
+def fetch_reddit_json(path):
+    token = get_reddit_access_token()
+
+    if not token:
+        st.warning("Reddit OAuth token could not be generated.")
+        return None
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "User-Agent": REDDIT_USER_AGENT
+    }
+
+    url = f"https://oauth.reddit.com{path}"
+
+    try:
+        response = requests.get(url, headers=headers, timeout=15)
+
+        if response.status_code != 200:
+            st.warning(f"Reddit request failed: {response.status_code} - {url}")
             return None
 
         return response.json()
@@ -412,8 +471,8 @@ def fetch_live_reddit_pipeline_sample(comments_per_company=20):
             if len(company_rows) >= comments_per_company:
                 break
 
-            posts_url = f"https://www.reddit.com/r/{subreddit}/new.json?limit=15"
-            posts_data = fetch_reddit_json(posts_url)
+            posts_path = f"/r/{subreddit}/new?limit=15"
+            posts_data = fetch_reddit_json(posts_path)
 
             if not posts_data:
                 continue
@@ -434,10 +493,8 @@ def fetch_live_reddit_pipeline_sample(comments_per_company=20):
 
                 post_text = f"{post_title} {post_selftext}".lower()
 
-
-
-                comments_url = f"https://www.reddit.com/r/{subreddit}/comments/{post_id}.json?limit=50"
-                comments_data = fetch_reddit_json(comments_url)
+                comments_path = f"/r/{subreddit}/comments/{post_id}?limit=50"
+                comments_data = fetch_reddit_json(comments_path)
 
                 if not comments_data or not isinstance(comments_data, list) or len(comments_data) < 2:
                     continue
