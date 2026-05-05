@@ -1733,26 +1733,225 @@ if active_tab == "Dashboard":
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown(
-        f"""
-        <div class="rd-card">
-            <h2>Method: {method_name}</h2>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    with st.container(border=True):
+        st.markdown(f"## Method: {method_name}")
 
-    st.markdown("""
-    <div class="rd-card">
-        <h2>Overview of collected data</h2>
-        <p>
-            The dataset contains Reddit posts and comments collected through the Reddit public JSON API.
-            The collected mentions are stored in a PostgreSQL database and analyzed using three sentiment analysis methods.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown("## Overview of collected data")
+        st.write(
+            "The dataset contains Reddit posts and comments collected through the Reddit public JSON API. "
+            "The collected mentions are stored in a PostgreSQL database and analyzed using three sentiment analysis methods."
+        )
 
+        if method == "lr_3class_balanced":
+            col1, col2, col3 = st.columns(3)
+        else:
+            col1, col2, col3, col4 = st.columns(4)
 
+        col1.metric("Total mentions (filtered)", format_thousands_dot(total_mentions))
+        col2.metric("Model confidence", f"{avg_score:.4f}")
+        col3.metric("% Negative", f"{pct_neg:.2f}%")
+
+        if method == "vader":
+            col4.metric("% Disagreement LR vs VADER", f"{pct_diff:.2f}%")
+        elif method == "deep_learning_transformer":
+            col4.metric("% Disagreement LR vs DL", f"{pct_diff:.2f}%")
+
+        st.caption(
+            "Note: Avg confidence represents the average confidence/probability of the selected model. "
+            "For VADER, the score represents the compound sentiment score."
+        )
+        st.caption("The dashboard uses the data currently stored in the PostgreSQL database.")
+
+    with st.container(border=True):
+        st.markdown("## Sentiment distribution by method")
+
+        method_distribution = safe_read_df("""
+            SELECT
+                method,
+                SUM(CASE WHEN label = 'positive' THEN 1 ELSE 0 END) AS positive,
+                SUM(CASE WHEN label = 'neutral' THEN 1 ELSE 0 END) AS neutral,
+                SUM(CASE WHEN label = 'negative' THEN 1 ELSE 0 END) AS negative,
+                COUNT(*) AS total
+            FROM reputation.sentiment_result
+            GROUP BY method
+            ORDER BY method;
+        """)
+
+        if not method_distribution.empty:
+            st.dataframe(method_distribution, use_container_width=True)
+
+            chart_df = method_distribution.set_index("method")[["positive", "neutral", "negative"]]
+            st.bar_chart(chart_df)
+        else:
+            st.info("Nu există date suficiente pentru distribuția sentimentului pe metode.")
+
+    with st.container(border=True):
+        st.markdown("## Sentiment breakdown")
+
+        extra1, extra2, extra3 = st.columns(3)
+
+        extra1.metric("Positive mentions", format_thousands_dot(positive_count))
+        extra2.metric("Negative mentions", format_thousands_dot(negative_count))
+        extra3.metric("Neutral mentions", format_thousands_dot(neutral_count))
+
+    with st.container(border=True):
+        st.markdown("## Company summary (selected method)")
+
+        cols_order = [
+            "company_id",
+            "company_name",
+            "method",
+            "mentions",
+            "avg_score",
+            "positives",
+            "negatives",
+            "neutrals",
+            "pct_negative",
+        ]
+
+        if not summary.empty:
+            existing_cols = [col for col in cols_order if col in summary.columns]
+            summary = summary[existing_cols].sort_values("mentions", ascending=False)
+            st.dataframe(summary, use_container_width=True)
+
+            csv_bytes = summary.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="⬇ Download summary CSV",
+                data=csv_bytes,
+                file_name=f"summary_{method}.csv",
+                mime="text/csv",
+            )
+        else:
+            st.info("Nu există date pentru filtrul selectat.")
+
+    with st.container(border=True):
+        st.markdown("## Mentions by company")
+
+        st.caption(
+            "Note: Differences in mention volume reflect the frequency of Reddit discussions captured from the selected "
+            "subreddits and keywords. A higher number of mentions does not necessarily indicate higher overall popularity "
+            "or better reputation."
+        )
+
+        if not summary.empty and "company_name" in summary.columns and "mentions" in summary.columns:
+            mentions_chart = summary[["company_name", "mentions"]].sort_values("mentions", ascending=True)
+            st.bar_chart(mentions_chart.set_index("company_name"))
+        else:
+            st.info("Nu există date suficiente pentru graficul de volum.")
+
+    with st.container(border=True):
+        st.markdown("## Negative sentiment by company")
+
+        if not summary.empty and "company_name" in summary.columns and "pct_negative" in summary.columns:
+            negative_chart = summary[["company_name", "pct_negative"]].sort_values("pct_negative", ascending=True)
+            st.bar_chart(negative_chart.set_index("company_name"))
+        else:
+            st.info("Nu există date suficiente pentru graficul de sentiment negativ.")
+
+    with st.container(border=True):
+        st.markdown("## Interpretation")
+
+        if total_mentions > 0:
+            interpretation = generate_interpretation(
+                company=company,
+                method_name=method_name,
+                total_mentions=total_mentions,
+                avg_score=avg_score,
+                pct_negative=pct_neg,
+                pct_disagreement=pct_diff,
+            )
+            st.info(interpretation)
+        else:
+            st.info("No data is available for the current selection, so no interpretation can be generated.")
+
+    with st.container(border=True):
+        st.markdown("## Method note")
+        st.write(generate_method_note(method_name))
+
+    if method in ["vader", "deep_learning_transformer"]:
+        with st.container(border=True):
+            st.markdown(f"## Method disagreement: {comparison_title}")
+
+            if not comparison_company.empty:
+                sort_col = "pct_different" if "pct_different" in comparison_company.columns else comparison_company.columns[-1]
+                comparison_company = comparison_company.sort_values(sort_col, ascending=False)
+                st.dataframe(comparison_company, use_container_width=True)
+            else:
+                st.info("Nu exista date despre disagreement pentru filtrul selectat.")
+
+        with st.container(border=True):
+            st.markdown(f"## Posts where {comparison_title} disagree")
+
+            if method == "deep_learning_transformer":
+                keep_cols = [
+                    "mention_id",
+                    "company_name",
+                    "title",
+                    "author",
+                    "published_at",
+                    "lr_label",
+                    "lr_score",
+                    "dl_label",
+                    "dl_score",
+                ]
+            else:
+                keep_cols = [
+                    "mention_id",
+                    "company_name",
+                    "title",
+                    "author",
+                    "published_at",
+                    "lr_label",
+                    "lr_score",
+                    "vader_label",
+                    "vader_score",
+                ]
+
+            if not comparison_rows.empty:
+                existing_keep_cols = [col for col in keep_cols if col in comparison_rows.columns]
+
+                if existing_keep_cols:
+                    sort_col = "published_at" if "published_at" in comparison_rows.columns else existing_keep_cols[0]
+                    comparison_rows = comparison_rows[existing_keep_cols].sort_values(
+                        sort_col,
+                        ascending=False,
+                    ).head(limit_rows)
+                    st.dataframe(comparison_rows, use_container_width=True)
+                else:
+                    st.info("Nu există coloanele necesare pentru afișarea comparației.")
+            else:
+                st.info("Nu exista postări în care metodele selectate să difere pentru filtrul selectat.")
+
+    with st.container(border=True):
+        st.markdown("## Most negative mentions")
+
+        negative_examples = safe_read_df(f"""
+            SELECT
+                m.mention_id,
+                c.name AS company_name,
+                m.title,
+                m.content,
+                m.author,
+                m.published_at,
+                s.label,
+                s.score
+            FROM reputation.mention m
+            JOIN reputation.companies c ON m.company_id = c.company_id
+            JOIN reputation.sentiment_result s ON m.mention_id = s.mention_id
+            WHERE s.method = %s
+              AND s.label = 'negative'
+            ORDER BY s.score {order_direction}
+            LIMIT 30;
+        """, params=(method,))
+
+        if company != "All" and not negative_examples.empty:
+            negative_examples = negative_examples[negative_examples["company_name"] == company]
+
+        if not negative_examples.empty:
+            st.dataframe(negative_examples.head(10), use_container_width=True)
+        else:
+            st.info("Nu există exemple negative pentru filtrul selectat.")
 
 
 
