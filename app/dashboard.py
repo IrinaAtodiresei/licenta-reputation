@@ -19,6 +19,8 @@ import base64
 
 import requests
 
+from chains.reputation_marketing_chain import generate_marketing_ai_insights
+
 # ------------------------------------------------------------
 # CONFIG
 # ------------------------------------------------------------
@@ -178,7 +180,7 @@ def safe_read_df(sql: str, params=None) -> pd.DataFrame:
     try:
         return read_df(sql, params=params)
     except Exception as e:
-        st.warning(f"Nu s-au putut încărca datele pentru această secțiune: {e}")
+        st.warning(f"Data could not be loaded for this section: {e}")
         return pd.DataFrame()
 
 @st.cache_resource
@@ -317,6 +319,50 @@ Rules:
             continue
 
     raise Exception(f"All Groq fallback models failed. Last error: {last_error}")
+
+def build_examples_text(df, max_rows=12):
+    if df.empty:
+        return "No examples available."
+
+    examples = []
+
+    for _, row in df.head(max_rows).iterrows():
+        company_name = str(row.get("company_name", "") or "")
+        title = str(row.get("title", "") or "")
+        content = str(row.get("content", "") or "")
+        score = row.get("score", "")
+
+        text = f"{title} {content}".strip()
+        text = text[:600]
+
+        if text:
+            examples.append(
+                f"- Company: {company_name} | Score: {score} | Text: {text}"
+            )
+
+    return "\n".join(examples)
+
+
+def build_sentiment_context_text(
+    company,
+    method_name,
+    total_mentions,
+    positive_count,
+    neutral_count,
+    negative_count,
+    pct_neg,
+    avg_score,
+):
+    return f"""
+Company filter: {company}
+Sentiment method: {method_name}
+Total mentions: {total_mentions}
+Positive mentions: {positive_count}
+Neutral mentions: {neutral_count}
+Negative mentions: {negative_count}
+Negative percentage: {pct_neg:.2f}%
+Average score/confidence: {avg_score:.4f}
+"""
 
 def format_thousands_dot(value):
     return f"{int(value):,}".replace(",", ".")
@@ -1503,7 +1549,7 @@ if need_reload:
                 FROM reputation.v_company_lr_dl_disagreement
             """)
         except Exception:
-            st.error("Nu gasesc view-ul reputation.v_company_lr_dl_disagreement.")
+            st.error("View reputation.v_company_lr_dl_disagreement could not be found.")
             st.stop()
 
         try:
@@ -1512,7 +1558,7 @@ if need_reload:
                 FROM reputation.v_lr_dl_sentiment_disagreements
             """)
         except Exception:
-            st.error("Nu gasesc view-ul reputation.v_lr_dl_sentiment_disagreements.")
+            st.error("View reputation.v_lr_dl_sentiment_disagreements could not be found.")
             st.stop()
 
     elif method == "vader":
@@ -1597,11 +1643,12 @@ if "last_selected_company" not in st.session_state:
 if "last_selected_method" not in st.session_state:
     st.session_state.last_selected_method = method_name
 
-
 company_changed = st.session_state.last_selected_company != company
 method_changed = st.session_state.last_selected_method != method_name
 
 if company_changed or method_changed:
+    st.session_state.pop("marketing_ai_insights", None)
+
     if company == "All":
         temporary_message = (
             f"Analyzing Apple, Samsung, and Google based on "
@@ -2230,7 +2277,19 @@ if active_tab == "AI insights":
 
     st.markdown(load_html_file("ai_insights_intro.html"), unsafe_allow_html=True)
 
-    st.subheader("Selected analysis context")
+    st.markdown("## AI Insights — Marketing & Reputation Intelligence")
+
+    st.write(
+        "This section transforms sentiment analysis results into useful insights for a marketing department. "
+        "The interpretation is generated with Groq orchestrated through LangChain, based on real metrics and Reddit examples."
+    )
+
+    st.markdown("### Context used for AI interpretation")
+
+    st.info(
+        "This tab uses the selected company, sentiment method, aggregated metrics and negative Reddit examples "
+        "to generate a business-oriented LLM interpretation."
+    )
 
     ai_col1, ai_col2, ai_col3 = st.columns(3)
 
@@ -2260,6 +2319,36 @@ if active_tab == "AI insights":
         LIMIT 30;
     """, params=(method, company, company))
 
+    llm_all_examples = safe_read_df(f"""
+        SELECT
+            m.mention_id,
+            c.name AS company_name,
+            m.title,
+            m.content,
+            m.author,
+            m.published_at,
+            s.label,
+            s.score
+        FROM reputation.mention m
+        JOIN reputation.companies c ON m.company_id = c.company_id
+        JOIN reputation.sentiment_result s ON m.mention_id = s.mention_id
+        WHERE s.method = %s
+          AND (%s = 'All' OR c.name = %s)
+        ORDER BY m.published_at DESC
+        LIMIT 40;
+    """, params=(method, company, company))
+
+    if company != "All":
+        if not llm_negative_examples.empty and "company_name" in llm_negative_examples.columns:
+            llm_negative_examples = llm_negative_examples[
+                llm_negative_examples["company_name"].astype(str).str.lower() == company.lower()
+                ]
+
+        if not llm_all_examples.empty and "company_name" in llm_all_examples.columns:
+            llm_all_examples = llm_all_examples[
+                llm_all_examples["company_name"].astype(str).str.lower() == company.lower()
+                ]
+
     llm_context_df = pd.DataFrame([
         {
             "company_filter": company,
@@ -2275,64 +2364,159 @@ if active_tab == "AI insights":
 
     st.dataframe(llm_context_df, use_container_width=True, hide_index=True)
 
-    st.markdown("### Negative examples used for interpretation")
+    with st.expander("View negative examples sent to the LLM"):
+        if not llm_negative_examples.empty:
+            st.dataframe(
+                llm_negative_examples[
+                    [
+                        "mention_id",
+                        "company_name",
+                        "title",
+                        "content",
+                        "published_at",
+                        "score",
+                    ]
+                ].head(10),
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("No negative examples are available for the selected filters.")
 
-    if not llm_negative_examples.empty:
-        st.dataframe(
-            llm_negative_examples[
-                [
-                    "mention_id",
-                    "company_name",
-                    "title",
-                    "content",
-                    "published_at",
-                    "score",
-                ]
-            ].head(10),
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.info("No negative examples are available for the selected filters.")
+    with st.expander("View general sample sent to the LLM"):
+        if not llm_all_examples.empty:
+            st.dataframe(
+                llm_all_examples[
+                    [
+                        "mention_id",
+                        "company_name",
+                        "title",
+                        "content",
+                        "label",
+                        "score",
+                    ]
+                ].head(15),
+                use_container_width=True,
+                hide_index=True
+            )
+        else:
+            st.info("No examples are available for the selected filters.")
 
     st.markdown("---")
-    st.subheader("Generate LLM interpretation")
-
-    if "last_groq_model" in st.session_state:
-        st.caption(f"Active Groq model used in the last successful generation: {st.session_state['last_groq_model']}")
+    st.subheader("Generate marketing intelligence")
 
     if not GROQ_API_KEY:
         st.warning(
             "GROQ_API_KEY is not configured. Add it in .env locally and in Streamlit Cloud Secrets for deployment."
         )
     else:
-        if st.button("Generate AI business insight"):
-            with st.spinner("Generating business interpretation with Groq..."):
+        if st.button("Generate marketing insights"):
+            with st.spinner("Generating marketing insights with Groq + LangChain..."):
                 try:
-                    insight = generate_llm_business_insight(
+                    if company == "All":
+                        analysis_scope = (
+                            "The selected scope includes Apple, Samsung, and Google together. "
+                            "Do not describe the results as the perception of a single brand or company. "
+                            "Use expressions such as 'the selected companies', 'the analyzed companies', "
+                            "'the portfolio of brands', or 'the market-level sample'."
+                        )
+                    else:
+                        analysis_scope = (
+                            f"The selected scope focuses only on {company}. "
+                            f"The interpretation may refer to {company} as one company or brand."
+                        )
+
+                    sentiment_context = build_sentiment_context_text(
                         company=company,
                         method_name=method_name,
-                        summary_df=summary,
-                        negative_df=llm_negative_examples,
+                        total_mentions=total_mentions,
+                        positive_count=positive_count,
+                        neutral_count=neutral_count,
+                        negative_count=negative_count,
+                        pct_neg=pct_neg,
+                        avg_score=avg_score,
                     )
 
-                    if insight:
+                    sentiment_context += f"\nAnalysis scope rule:\n{analysis_scope}\n"
 
-                        st.markdown("### LLM Interpretation")
-                        st.success(insight)
-                    else:
-                        st.warning("No interpretation could be generated.")
+                    if company != "All":
+                        llm_all_examples = llm_all_examples[
+                            llm_all_examples["company_name"] == company
+                            ]
+
+                        llm_negative_examples = llm_negative_examples[
+                            llm_negative_examples["company_name"] == company
+                            ]
+
+                    examples_text = build_examples_text(llm_all_examples, max_rows=15)
+                    negative_examples_text = build_examples_text(llm_negative_examples, max_rows=12)
+
+                    context = {
+                        "company": company,
+                        "analysis_scope": (
+                            "This is a portfolio-level analysis across Apple, Samsung, and Google. "
+                            "Do not describe them as one brand or one company."
+                            if company == "All"
+                            else f"This analysis focuses ONLY on {company}. "
+                                 f"Do not mention any other company. "
+                                 f"Do not compare {company} with Apple, Google, Samsung, or any other brand unless explicitly present in the filtered examples. "
+                                 "Do not use portfolio-level wording."
+                        ),
+                        "method_name": method_name,
+                        "total_mentions": total_mentions,
+                        "positive_mentions": positive_count,
+                        "neutral_mentions": neutral_count,
+                        "negative_mentions": negative_count,
+                        "negative_percentage": f"{pct_neg:.2f}%",
+                        "average_score": f"{avg_score:.4f}",
+                        "examples": examples_text,
+                        "negative_examples": negative_examples_text,
+                        "sentiment_context": sentiment_context,
+                    }
+
+                    insights = generate_marketing_ai_insights(context)
+
+                    st.session_state["marketing_ai_insights"] = insights
 
                 except Exception as e:
                     st.error(f"LLM interpretation failed: {e}")
 
+    if "marketing_ai_insights" in st.session_state:
+        insights = st.session_state["marketing_ai_insights"]
+
+        st.markdown("## Executive summary")
+        st.info(insights["executive_summary"])
+
+        st.markdown("## Marketing department insights")
+
+        card_col1, card_col2, card_col3, card_col4 = st.columns(4)
+
+        with card_col1:
+            st.markdown("### 🤖 General sentiment")
+            st.success(insights["general_sentiment"])
+
+        with card_col2:
+            st.markdown("### 💬 Top 3 recurring themes")
+            st.warning(insights["recurring_themes"])
+
+        with card_col3:
+            st.markdown("### ⚠️ Reputation risks")
+            st.error(insights["reputation_risks"])
+
+        with card_col4:
+            st.markdown("### 📈 Marketing recommendations")
+            st.info(insights["marketing_recommendations"])
+
+        st.markdown("## AI-generated narrative interpretation")
+        st.write(insights["narrative_interpretation"])
+
     st.markdown("### Academic explanation")
 
     st.write(
-        "The integration of Groq has the role of adding a semantic interpretation layer above the statistical "
-        "sentiment analysis. The system therefore moves from simple classification toward contextual understanding "
-        "of user opinions. This combines classic machine learning, rule-based analysis, transformer-based inference, "
-        "and modern LLM-based interpretation."
+        "In this version, Groq is used as the LLM engine, while LangChain orchestrates specialized prompts "
+        "for each section: executive summary, general sentiment, recurring themes, reputation risks, "
+        "marketing recommendations and narrative interpretation. The LLM does not replace the sentiment models; "
+        "it interprets aggregated results and real Reddit examples in a business-oriented language."
     )
 
 # ===================== INTERACTIVE DEMO TAB =====================
