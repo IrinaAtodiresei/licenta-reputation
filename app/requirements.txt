@@ -12,3 +12,5 @@ transformers
 torch
 torchvision
 groq
+langchain
+langchain-groq
