@@ -38,6 +38,89 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+st.markdown("""
+<style>
+div[data-testid="stAppViewContainer"] {
+    background-color: #F5F5F5;
+}
+
+.block-container {
+    padding-top: 1.5rem !important;
+    max-width: 1200px !important;
+}
+
+section[data-testid="stSidebar"] {
+    background-color: #F5F5F5;
+}
+
+section[data-testid="stSidebar"] > div {
+    background: white;
+    margin: 24px 12px;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+h1, h2, h3 {
+    color: #007BFF;
+}
+
+.rd-card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.rd-card h2 {
+    margin-top: 0;
+    color: #007BFF;
+}
+
+.rd-header-main {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: white;
+    padding: 24px 32px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    margin-bottom: 24px;
+}
+
+.rd-header-main img {
+    height: 48px;
+}
+
+.rd-header-main h1 {
+    margin: 0;
+    color: #FF8A00;
+    font-size: 32px;
+}
+
+.rd-header-main h3 {
+    margin: 4px 0 0;
+    color: #FFC300;
+    font-size: 18px;
+}
+
+.stMetric {
+    background: #F9FAFB;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+div[data-testid="stDataFrame"] {
+    border-radius: 12px;
+}
+
+.stButton button {
+    border-radius: 8px !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 EVAL_DIR = BASE_DIR / "evaluation"
 
@@ -56,6 +139,22 @@ LOGO_PATH = BASE_DIR / "app" / "assets" / "img2.png"
 LANDING_LOGO_PATH = BASE_DIR / "app" / "assets" / "logo.png"
 
 FALLBACK_PATH = BASE_DIR / "data" / "fallback_pipeline_sample.csv"
+
+HTML_DIR = Path(__file__).resolve().parent / "assets" / "html"
+
+def load_html_file(filename: str) -> str:
+    path = HTML_DIR / filename
+
+    if not path.exists():
+        return f"""
+        <div style="padding:16px; background:#fee2e2; border:1px solid #ef4444; border-radius:12px;">
+            Missing HTML file: {filename}<br>
+            Expected path: {path}
+        </div>
+        """
+
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
 
 def load_fallback_pipeline_sample():
     if FALLBACK_PATH.exists():
@@ -1149,125 +1248,217 @@ st.markdown(
 if st.button("💬 Help", key="floating_help_button_main_unique"):
     render_guide_dialog()
 
-# ------------------------------------------------------------
-# LANDING PAGE
-# ------------------------------------------------------------
 if not st.session_state.entered_app:
-    st.markdown(
-        """
-        <style>
-        
-        header {
-            visibility: hidden;
-        }
-
-        .block-container {
-            padding-top: 2rem !important;
-            max-width: 1100px;
-        }
-
-        .landing-title {
-            font-size: 3.4rem;
-            font-weight: 800;
-            color: #111827;
-            margin-bottom: 0.5rem;
-            text-align: center;
-        }
-
-        .landing-subtitle {
-            font-size: 1.15rem;
-            max-width: 820px;
-            color: #374151;
-            line-height: 1.7;
-            margin: 0 auto 1.5rem auto;
-            text-align: center;
-        }
-        
-        .landing-logo {
-            width: 260px;
-            max-width: 70%;
-            height: auto;
-            display: block;
-            margin: 0 auto 12px auto;
-        }
-
-      .landing-card {
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            border-radius: 22px;
-            padding: 18px 28px;
-            padding-left: 80px;  /* 🔥 asta mută textul unde vrei */
-            margin-top: 26px;
-            color: #374151;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-            text-align: left;
-            width: 450px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .landing-footer {
-            margin-top: 28px;
-            color: #6b7280;
-            font-size: 0.9rem;
-            text-align: center;
-        }
-        
-        .landing-center {
-            max-width: 720px;
-            margin: 0 auto;
-            text-align: center;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.markdown('<div class="landing-center">', unsafe_allow_html=True)
-
-    landing_logo_html = ""
+    landing_logo_base64 = ""
     if LANDING_LOGO_PATH.exists():
-        landing_logo_html = f'<img src="data:image/png;base64,{base64.b64encode(open(LANDING_LOGO_PATH, "rb").read()).decode()}" class="landing-logo">'
+        landing_logo_base64 = base64.b64encode(
+            open(LANDING_LOGO_PATH, "rb").read()
+        ).decode()
+
     st.markdown(
         f"""
-        {landing_logo_html}
+        <style>
+        header {{ visibility: hidden; }}
 
-        <div class="landing-title">Reputation Dashboard</div>
+        .block-container {{
+            padding: 0 !important;
+            max-width: 100% !important;
+        }}
 
-        <div class="landing-subtitle">
-            This application analyzes the online reputation of major technology companies
-            based on public Reddit discussions. It combines machine learning, rule-based sentiment analysis,
-            transformer-based inference, and LLM-generated business interpretation.
+        div[data-testid="stAppViewContainer"] {{
+            background-color: #F5F5F5;
+        }}
+
+        .rd-header {{
+            background: white;
+            padding: 32px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }}
+
+        .rd-header img {{ height: 64px; }}
+
+        .rd-header h1 {{
+            margin: 0;
+            font-size: 36px;
+            color: #FF8A00;
+        }}
+
+        .rd-header p {{
+            margin: 4px 0 0 0;
+            font-size: 16px;
+            color: #FFC300;
+        }}
+
+        .rd-hero {{
+            text-align: center;
+            padding: 80px 32px;
+            background: linear-gradient(180deg, #1F2937 0%, #111827 100%);
+            color: white;
+        }}
+
+        .rd-hero h2 {{
+            font-size: 36px;
+            margin-bottom: 16px;
+        }}
+
+        .rd-hero p {{
+            font-size: 18px;
+            color: #D1D5DB;
+            line-height: 1.6;
+            max-width: 700px;
+            margin: 0 auto;
+        }}
+
+        .rd-button-wrapper {{
+            text-align: center;
+            background: #F5F5F5;
+            padding-top: 32px;
+        }}
+
+        .rd-features {{
+            padding: 60px 32px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }}
+
+        .rd-features h2 {{
+            text-align: center;
+            font-size: 28px;
+            color: #007BFF;
+            margin-bottom: 32px;
+        }}
+
+        .rd-feature-grid {{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }}
+
+        .rd-feature-card {{
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            border-left: 6px solid;
+        }}
+
+        .rd-feature-card h3 {{
+            margin: 0 0 8px 0;
+        }}
+
+        .rd-feature-card p {{
+            margin: 0;
+            color: #444;
+        }}
+
+        .rd-footer {{
+            background: #F0F0F0;
+            color: #444;
+            padding: 32px;
+            margin-top: 60px;
+            text-align: center;
+            border-top: 3px solid #FF8A00;
+        }}
+
+        .rd-footer img {{
+            height: 40px;
+            opacity: 0.9;
+            margin-bottom: 12px;
+        }}
+
+        .rd-footer a {{
+            color: #007BFF;
+            text-decoration: none;
+            font-weight: 600;
+        }}
+
+        div.stButton > button {{
+            background: #FF8A00 !important;
+            color: white !important;
+            border: none !important;
+            border-radius: 10px !important;
+            font-size: 18px !important;
+            font-weight: 600 !important;
+            padding: 14px 32px !important;
+        }}
+        </style>
+
+        <div class="rd-header">
+            <img src="data:image/png;base64,{landing_logo_base64}" alt="Reputation Logo">
+            <div>
+                <h1>Reputation Dashboard</h1>
+                <p>Analiză reputațională · AI Insights · Marketing Intelligence</p>
+            </div>
         </div>
+
+        <section class="rd-hero">
+            <h2>🧠 Analiză reputațională asistată de AI</h2>
+            <p>
+                Această aplicație analizează reputația online a marilor companii tehnologice pe baza
+                discuțiilor publice de pe Reddit. Combină machine learning, analiza de sentiment bazată
+                pe reguli, inferența transformer și interpretarea de business generată de LLM.
+            </p>
+        </section>
         """,
         unsafe_allow_html=True
     )
 
-    button_col1, button_col2, button_col3 = st.columns([1, 1, 1])
-    with button_col2:
-        if st.button("Explore reputation analysis", type="primary"):
+    st.markdown('<div class="rd-button-wrapper">', unsafe_allow_html=True)
+    hero_col1, hero_col2, hero_col3 = st.columns([2, 1, 2])
+    with hero_col2:
+        if st.button("Explorează analiza reputației →", type="primary"):
             st.session_state.entered_app = True
             st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown(
+    st.html(
+        f"""
+        <section class="rd-features">
+            <h2>Funcționalități principale</h2>
+
+            <div class="rd-feature-grid">
+                <div class="rd-feature-card" style="border-left-color:#FF8A00;">
+                    <h3 style="color:#FF8A00;">📊 Dashboard ML</h3>
+                    <p>Vizualizări interactive pentru analiza sentimentului, distribuții, scoruri și evoluții temporale.</p>
+                </div>
+
+                <div class="rd-feature-card" style="border-left-color:#FFC300;">
+                    <h3 style="color:#FFC300;">🤖 AI Insights</h3>
+                    <p>Interpretare semantică generată de LLM-uri Groq/Ollama prin LangChain, cu insight-uri pentru marketing.</p>
+                </div>
+
+                <div class="rd-feature-card" style="border-left-color:#007BFF;">
+                    <h3 style="color:#007BFF;">📁 Proof of Source</h3>
+                    <p>Fiecare insight este susținut de exemple reale din dataset, pentru transparență și validare academică.</p>
+                </div>
+            </div>
+        </section>
+
+        <footer class="rd-footer">
+            <img src="data:image/png;base64,{landing_logo_base64}" alt="Logo">
+
+            <div style="font-size:15px; margin-bottom:6px;">
+                Reputation Dashboard — Licență 2026 — <strong>Irina Atodiresei</strong>
+            </div>
+
+            <div style="margin-bottom:6px;">
+                🔗
+                <a href="https://github.com/IrinaAtodiresei/licenta-reputation" target="_blank">
+                    GitHub Repository
+                </a>
+            </div>
+
+            <div style="font-size:13px; color:#666;">
+                Built with Streamlit · Machine Learning · LLM · Groq · LangChain
+            </div>
+        </footer>
         """
-        <div class="landing-card">
-            <strong>Bachelor's thesis project</strong><br>
-            CSIE · Economic Informatics<br>
-            Coordinator: Ana Ramona Bologa
-        </div>
-
-        <div class="landing-footer">
-            2026 · Irina Atodiresei · GitHub: IrinaAtodiresei/licenta-reputation
-        </div>
-        """,
-        unsafe_allow_html=True
     )
 
-    st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
-
-
 # ------------------------------------------------------------
 # SIDEBAR
 # ------------------------------------------------------------
@@ -1474,9 +1665,6 @@ if method == "deep_learning_transformer":
 else:
     order_direction = "ASC"
 
-# ------------------------------------------------------------
-# HEADER (NEW - above tabs)
-# ------------------------------------------------------------
 st.markdown(
     """
     <style>
@@ -1488,43 +1676,22 @@ st.markdown(
     header {
         visibility: visible;
     }
-
-    .app-header {
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-        margin-top: 12px;
-        margin-bottom: 5px;
-        background: transparent !important;
-    }
-
-    .app-header img {
-        height: 90px;
-        width: auto;
-        background: transparent !important;
-        display: block;
-        }
-
-    /* 🔥 elimină orice "card" gri din Streamlit */
-    div[data-testid="stImage"] {
-        background: transparent !important;
-        padding: 0 !important;
-    }
-    
     </style>
     """,
     unsafe_allow_html=True
-
-
 )
 
-if LOGO_PATH.exists():
-    logo_base64 = base64.b64encode(open(LOGO_PATH, "rb").read()).decode()
+if LANDING_LOGO_PATH.exists():
+    logo_base64 = base64.b64encode(open(LANDING_LOGO_PATH, "rb").read()).decode()
 
     st.markdown(
         f"""
-        <div class="app-header">
-            <img src="data:image/png;base64,{logo_base64}">
+        <div class="rd-header-main">
+            <img src="data:image/png;base64,{logo_base64}" alt="Logo">
+            <div>
+                <h1>Reputation & Sentiment Dashboard</h1>
+                <h3>Analiză reputațională pentru companii tehnologice</h3>
+            </div>
         </div>
         """,
         unsafe_allow_html=True
@@ -1547,32 +1714,48 @@ active_tab = st.segmented_control(
 # ===================== DASHBOARD TAB =====================
 if active_tab == "Dashboard":
 
-    st.title("Reputation & Sentiment Dashboard")
+    st.markdown("""
+    <div class="rd-card">
+        <h2>What does this app do?</h2>
+        <p>
+            This application analyzes public Reddit discussions about major tech companies and automatically detects
+            whether the sentiment is positive, neutral, or negative.
+        </p>
+        <p>It compares three different approaches:</p>
+        <ul>
+            <li>Logistic Regression (machine learning baseline)</li>
+            <li>VADER (rule-based)</li>
+            <li>Deep Learning Transformer</li>
+        </ul>
+        <p>
+            Use the controls on the left to explore how sentiment changes across companies and methods.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(
+        f"""
+        <div class="rd-card">
+            <h2>Method: {method_name}</h2>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.markdown("""
-    ### What does this app do?
+    <div class="rd-card">
+        <h2>Overview of collected data</h2>
+        <p>
+            The dataset contains Reddit posts and comments collected through the Reddit public JSON API.
+            The collected mentions are stored in a PostgreSQL database and analyzed using three sentiment analysis methods.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    This application analyzes public Reddit discussions about major tech companies 
-    and automatically detects whether the sentiment is **positive, neutral, or negative**.
 
-    It compares three different approaches:
-    - Logistic Regression (machine learning baseline)
-    - VADER (rule-based)
-    - Deep Learning Transformer
 
-    Use the controls on the left to explore how sentiment changes across companies and methods.
-    """)
 
-    st.subheader(f"Method: {method_name}")
 
-    st.markdown("### Overview of collected data")
-
-    st.info(
-        "The dataset contains Reddit posts and comments collected through the Reddit public JSON API. "
-        "The collection process used selected technology-related subreddits, keyword filtering, pagination, "
-        "search endpoints, pagination, and comment extraction. "
-        "The collected mentions are stored in a PostgreSQL database and analyzed using three sentiment analysis methods."
-    )
 
 
     # ------------------------------------------------------------
@@ -2086,19 +2269,8 @@ if active_tab == "Dashboard":
 
 # ===================== AI INSIGHTS TAB =====================
 if active_tab == "AI insights":
-    st.title("AI-generated business insights")
 
-    st.markdown("""
-    This section uses a Large Language Model to interpret the aggregated sentiment results.
-
-    Instead of showing only charts and scores, the LLM explains what the sentiment patterns may mean
-    from a business and reputation perspective.
-    """)
-
-    st.info(
-        "The LLM does not replace the sentiment models. It acts as an interpretation layer above the existing "
-        "Reddit sentiment results stored in the PostgreSQL database."
-    )
+    st.markdown(load_html_file("ai_insights_intro.html"), unsafe_allow_html=True)
 
     st.subheader("Selected analysis context")
 
@@ -2207,14 +2379,7 @@ if active_tab == "AI insights":
 
 # ===================== INTERACTIVE DEMO TAB =====================
 if active_tab == "Interactive model demo":
-    st.title("How the sentiment models work")
-
-    st.markdown("""
-    This section shows how each model interprets the same sentence at word level.
-
-    The visualization uses green bars for words that push sentiment toward **positive**
-    and red bars for words that push sentiment toward **negative**.
-    """)
+    st.markdown(load_html_file("demo_intro.html"), unsafe_allow_html=True)
 
     default_examples = [
         "I love Google products, they are amazing and reliable",
@@ -2559,19 +2724,8 @@ if active_tab == "Live pipeline":
 
 # ===================== PROOF OF SOURCE TAB =====================
 if active_tab == "Proof of source":
-    st.title("Proof of source")
 
-    st.markdown("""
-    This section displays the Reddit mentions already stored in the database.
-
-    The table below shows the existing collected posts/comments, 50 rows at a time.
-    """)
-
-    st.info(
-        "These are existing records from the PostgreSQL database. "
-        "For older records, full Reddit metadata such as raw JSON or direct Reddit URL may not be available, "
-        "because those fields were added later."
-    )
+    st.markdown(load_html_file("proof_of_source_intro.html"), unsafe_allow_html=True)
 
     rows_per_page = 50
 
@@ -2712,3 +2866,25 @@ Existing stored Reddit record example:
   "collected_at": "timestamp when saved in PostgreSQL"
 }
         """, language="json")
+
+st.markdown(
+    """
+    <footer style="
+        background:#F5F5F5;
+        padding:16px;
+        text-align:center;
+        font-size:14px;
+        color:#555;
+        border-top:2px solid #FF8A00;
+        margin-top:40px;
+    ">
+        <div style="margin-bottom:6px;">
+            <strong>Reputation Dashboard</strong> — Licență 2026 — Irina Atodiresei
+        </div>
+        <div style="font-size:12px; color:#777;">
+            Built with Streamlit · Machine Learning · LLM · Groq · LangChain
+        </div>
+    </footer>
+    """,
+    unsafe_allow_html=True
+)

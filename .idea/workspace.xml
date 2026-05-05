@@ -5,6 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5e144aed-1f1e-4264-bf5c-2969611e1c6d" name="Changes" comment="Added DistilBERT vs Logistic Regression comparison on labeled Reddit sample">
+      <change afterPath="$PROJECT_DIR$/app/assets/html/ai_insights_intro.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/assets/html/dashboard_intro.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/assets/html/demo_intro.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/assets/html/footer.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/assets/html/header.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/assets/html/live_pipeline_intro.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/assets/html/proof_of_source_intro.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/dashboard.py" afterDir="false" />
     </list>
@@ -63,12 +70,13 @@
     "Python.train_sentiment140.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "feature/reddit-oauth-live-pipeline",
+    "git-widget-placeholder": "feature/html-streamlit-layout",
     "settings.editor.selected.configurable": "preferences.lookFeel"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Irina\Anul3\SEM2\LICENTA\app\assets" />
       <recent name="C:\Irina\Anul3\SEM2\LICENTA\archive_sent140" />
       <recent name="C:\Irina\Anul3\SEM2\LICENTA\models" />
     </key>
