@@ -1,0 +1,6 @@
+comment_id,text,subreddit,author,created_utc
+c1,"I love my new iPhone, Apple did a great job!",apple,user_apple_fan,2026-04-29 10:00:00
+c2,Google services are reliable but sometimes confusing.,google,user_google,2026-04-29 10:05:00
+c3,Samsung phones are good but overpriced.,samsung,user_samsung,2026-04-29 10:10:00
+c4,"I hate the latest update from Google, too many bugs.",google,user_bug,2026-04-29 10:15:00
+c5,Apple ecosystem is amazing but the prices are insane.,apple,user_mixed,2026-04-29 10:20:00

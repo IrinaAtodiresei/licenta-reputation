@@ -1,0 +1,16 @@
+{
+  "initial_rows": 1600000,
+  "null_texts": 0,
+  "null_labels": 0,
+  "after_dropna": 1600000,
+  "duplicates_removed": 16309,
+  "final_rows": 1583691,
+  "class_distribution": {
+    "1": 793506,
+    "0": 790185
+  },
+  "avg_text_length": 73.69780721112893,
+  "median_text_length": 69.0,
+  "min_text_length": 3,
+  "max_text_length": 373
+}

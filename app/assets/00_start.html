@@ -1,0 +1,177 @@
+<!-- 00_start.html -->
+
+<style>
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: #F5F5F5;
+    color: #1A1A1A;
+  }
+
+  header {
+    background: white;
+    padding: 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  header img {
+    height: 64px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 36px;
+    color: #FF8A00;
+  }
+  header p {
+    margin: 4px 0 0 0;
+    font-size: 16px;
+    color: #FFC300;
+  }
+
+  .hero {
+    text-align: center;
+    padding: 80px 32px;
+    background: linear-gradient(180deg, #1F2937 0%, #111827 100%);
+    color: white;
+  }
+  .hero h2 {
+    font-size: 36px;
+    margin-bottom: 16px;
+  }
+  .hero p {
+    font-size: 18px;
+    color: #D1D5DB;
+    line-height: 1.6;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  .hero button {
+    margin-top: 32px;
+    padding: 14px 32px;
+    background: #FF8A00;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .hero button:hover {
+    background: #e67a00;
+  }
+
+  .features {
+    padding: 60px 32px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .features h2 {
+    text-align: center;
+    font-size: 28px;
+    color: #007BFF;
+    margin-bottom: 32px;
+  }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+  }
+  .feature-card {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    border-left: 6px solid;
+  }
+  .feature-card h3 {
+    margin: 0 0 8px 0;
+  }
+  .feature-card p {
+    margin: 0;
+    color: #444;
+  }
+
+  footer {
+    background: #F0F0F0;
+    color: #444;
+    padding: 32px;
+    margin-top: 60px;
+    text-align: center;
+    border-top: 3px solid #FF8A00;
+  }
+  footer img {
+    height: 40px;
+    opacity: 0.9;
+    margin-bottom: 12px;
+  }
+  footer a {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  footer a:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<header>
+  <img src="assets/logo.png" alt="Reputation Logo">
+  <div>
+    <h1>Reputation Dashboard</h1>
+    <p>Analiză reputațională · AI Insights · Marketing Intelligence</p>
+  </div>
+</header>
+
+<section class="hero">
+  <h2>🧠 Analiză reputațională asistată de AI</h2>
+  <p>
+    Această aplicație analizează reputația online a marilor companii tehnologice pe baza discuțiilor publice de pe Reddit.
+    Combină machine learning, analiza de sentiment bazată pe reguli, inferența transformer și interpretarea de business generată de LLM.
+  </p>
+  <button>Explorează analiza reputației →</button>
+</section>
+
+<section class="features">
+  <h2>Funcționalități principale</h2>
+
+  <div class="feature-grid">
+
+    <div class="feature-card" style="border-left-color:#FF8A00;">
+      <h3 style="color:#FF8A00;">📊 Dashboard ML</h3>
+      <p>Vizualizări interactive pentru analiza sentimentului, distribuții, scoruri și evoluții temporale.</p>
+    </div>
+
+    <div class="feature-card" style="border-left-color:#FFC300;">
+      <h3 style="color:#FFC300;">🤖 AI Insights</h3>
+      <p>Interpretare semantică generată de LLM-uri Groq/Ollama prin LangChain, cu insight-uri pentru marketing.</p>
+    </div>
+
+    <div class="feature-card" style="border-left-color:#007BFF;">
+      <h3 style="color:#007BFF;">📁 Proof of Source</h3>
+      <p>Fiecare insight este susținut de exemple reale din dataset, pentru transparență și validare academică.</p>
+    </div>
+
+  </div>
+</section>
+
+<footer>
+  <img src="assets/logo.png" alt="Logo">
+
+  <div style="font-size:15px; margin-bottom:6px;">
+    Reputation Dashboard — Licență 2026 — <strong>Irina Atodiresei</strong>
+  </div>
+
+  <div style="margin-bottom:6px;">
+    🔗 
+    <a href="https://github.com/IrinaAtodiresei/licenta-reputation" target="_blank">
+      GitHub Repository
+    </a>
+  </div>
+
+  <div style="font-size:13px; color:#666;">
+    Built with Streamlit · Machine Learning · LLM · Groq · LangChain
+  </div>
+</footer>

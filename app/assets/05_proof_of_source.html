@@ -1,0 +1,187 @@
+<!-- 05_proof_of_source.html — Streamlit-ready fragment -->
+
+<style>
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: #F5F5F5;
+    color: #1A1A1A;
+  }
+
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    font-size: 14px;
+  }
+
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+
+  th {
+    background-color: #007BFF;
+    color: white;
+  }
+
+  tr:nth-child(even) {
+    background-color: #FAFAFA;
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    font-size: 14px;
+  }
+
+  .pagination button {
+    background: #FF8A00;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .pagination button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+
+  .detail-box {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    margin-top: 40px;
+  }
+
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .detail-item {
+    background: #F9FAFB;
+    border-left: 6px solid #007BFF;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .detail-item strong {
+    display: block;
+    color: #007BFF;
+    margin-bottom: 4px;
+  }
+
+  pre {
+    background: #F0F0F0;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-size: 13px;
+  }
+</style>
+
+<div class="page">
+
+  <h1 style="color:#FF8A00;">Proof of Source</h1>
+  <p style="color:#555; font-size:15px;">
+    Această secțiune afișează mențiunile Reddit colectate și stocate în baza de date PostgreSQL.
+    Datele sunt afișate în pagini de câte 50 de rânduri, pentru o vizualizare eficientă.
+  </p>
+
+  <!-- PAGINATION -->
+  <div class="pagination">
+    <span>Page 1 / 547 — showing rows 1 to 50 of 27349</span>
+    <div>
+      <button disabled>Previous</button>
+      <button>Next</button>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <table>
+    <thead>
+      <tr>
+        <th>mention_id</th>
+        <th>company_name</th>
+        <th>reddit_object_type</th>
+        <th>reddit_object_id</th>
+        <th>author</th>
+        <th>published_at</th>
+        <th>title</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>34442</td><td>Google</td><td>comment</td><td>oj0zvrw</td><td>Belostoma</td><td>2026-04-29 22:32:18</td><td>Sundar Pichai deserves some love</td></tr>
+      <tr><td>34441</td><td>Apple</td><td>comment</td><td>oj0zqcd</td><td>Moigno</td><td>2026-04-29 22:31:27</td><td>Sundar Pichai deserves some love</td></tr>
+      <tr><td>28014</td><td>Apple</td><td>comment</td><td>oj0zitc</td><td>CottonCandyCove</td><td>2026-04-29 22:30:17</td><td>macbook keyboard issues</td></tr>
+      <tr><td>28011</td><td>Apple</td><td>post</td><td>1szdssj</td><td>BroHogRidesAgain</td><td>2026-04-29 22:09:00</td><td>Green group chats working fine on</td></tr>
+      <tr><td>34439</td><td>Google</td><td>post</td><td>1szdrhi</td><td>GamingRandomizer</td><td>2026-04-29 22:27:31</td><td>Apparently, AI overview is Claude</td></tr>
+      <tr><td>36914</td><td>Samsung</td><td>post</td><td>1szdkeo</td><td>ControlCAD</td><td>2026-04-29 22:19:49</td><td>Motorola Razr Fold Initial Review</td></tr>
+    </tbody>
+  </table>
+
+  <!-- DETAIL BOX -->
+  <div class="detail-box">
+    <h2 style="margin-top:0; color:#007BFF;">Inspect selected mention</h2>
+
+    <div style="margin-bottom:16px;">
+      <label style="font-weight:600;">Choose a mention ID:</label>
+      <select style="margin-left:12px; padding:8px 12px; border-radius:8px; border:1px solid #CCC;">
+        <option selected>36914</option>
+        <option>34442</option>
+        <option>34441</option>
+        <option>28014</option>
+      </select>
+    </div>
+
+    <div class="detail-grid">
+      <div class="detail-item"><strong>Company</strong>Samsung</div>
+      <div class="detail-item"><strong>Reddit object type</strong>post</div>
+      <div class="detail-item"><strong>Reddit object ID</strong>1szdkeo</div>
+      <div class="detail-item"><strong>External ID stored in database</strong>post_1szdkeo</div>
+      <div class="detail-item"><strong>Author</strong>ControlCAD</div>
+      <div class="detail-item"><strong>Published at</strong>2026-04-29 22:19:49</div>
+      <div class="detail-item"><strong>Collected at</strong>2026-04-29 22:25:21.066576</div>
+    </div>
+
+    <div style="margin-top:16px; font-size:14px;">
+      <p><strong>Title:</strong><br>Motorola Razr Fold Initial Review</p>
+      <p><strong>Text stored in database:</strong><br>
+        Probably realized they can make more money from ads letting people play videos in pip for non premium subs.
+      </p>
+    </div>
+
+    <h3 style="margin-top:24px; color:#FF8A00;">Database source explanation</h3>
+    <p style="font-size:14px; color:#555;">
+      Fiecare mențiune este stocată în PostgreSQL cu un format JSON similar cu exemplul de mai jos:
+    </p>
+
+    <pre>{
+  "mention_id": 123,
+  "external_id": "comment_abc123",
+  "reddit_object_type": "comment",
+  "reddit_object_id": "abc123",
+  "author": "reddit_user",
+  "published_at": "timestamp from Reddit created_utc",
+  "collected_at": "timestamp when saved in PostgreSQL"
+}</pre>
+  </div>
+
+</div>

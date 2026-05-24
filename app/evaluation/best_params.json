@@ -1,0 +1,11 @@
+{
+  "clf__C": 1.0,
+  "clf__penalty": "l2",
+  "clf__solver": "liblinear",
+  "tfidf__max_features": 10000,
+  "tfidf__min_df": 5,
+  "tfidf__ngram_range": [
+    1,
+    2
+  ]
+}

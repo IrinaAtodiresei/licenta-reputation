@@ -1,0 +1,137 @@
+<!-- 02_ai_insights.html — Streamlit-ready fragment -->
+
+<style>
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: #F5F5F5;
+    color: #1A1A1A;
+  }
+
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px;
+  }
+
+  .section-title {
+    margin-bottom: 32px;
+  }
+
+  .section-title h1 {
+    margin: 0;
+    font-size: 32px;
+    color: #FF8A00;
+  }
+
+  .section-title p {
+    margin: 4px 0 0 0;
+    color: #FFC300;
+    font-size: 15px;
+  }
+
+  footer {
+    text-align: center;
+    font-size: 13px;
+    color: #555;
+    margin-top: 40px;
+    padding: 20px;
+    background: #fff;
+    border-top: 2px solid #FF8A00;
+  }
+</style>
+
+<div class="page">
+
+  <!-- TITLU SECȚIUNE -->
+  <div class="section-title">
+    <h1>AI Insights — Marketing & Reputation Intelligence</h1>
+    <p>Interpretare automată a percepției publice pe baza comentariilor Reddit</p>
+  </div>
+
+  <!-- CONTROALE -->
+  <section style="background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 32px;">
+    <h2 style="color: #007BFF; margin-bottom: 16px;">🔍 Selectează contextul analizei</h2>
+
+    <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+
+      <div style="flex: 1; min-width: 200px;">
+        <label style="font-weight: 600;">Companie</label>
+        <select style="margin-top: 6px; width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #DDD; background:#F5F5F5;">
+          <option selected>Apple</option>
+          <option>Google</option>
+          <option>Microsoft</option>
+        </select>
+      </div>
+
+      <div style="flex: 1; min-width: 200px;">
+        <label style="font-weight: 600;">Perioadă analizată</label>
+        <select style="margin-top: 6px; width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #DDD; background:#F5F5F5;">
+          <option selected>Ultimele 30 zile</option>
+          <option>Ultimele 7 zile</option>
+          <option>Ultimele 90 zile</option>
+        </select>
+      </div>
+
+      <div style="flex: 1; min-width: 200px;">
+        <label style="font-weight: 600;">Motor LLM</label>
+        <select style="margin-top: 6px; width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #DDD; background:#F5F5F5;">
+          <option selected>Groq — Mixtral 8x7B</option>
+          <option>Groq — LLaMA 3.3 70B</option>
+          <option>Ollama — LLaMA 3</option>
+        </select>
+      </div>
+
+      <div style="display: flex; align-items: flex-end;">
+        <button style="padding: 12px 24px; background:#FF8A00; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer; font-size:15px;">
+          Generează insight-uri
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <section style="background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 32px;">
+    <h2 style="color: #007BFF; margin-bottom: 8px;">📊 Rezumat executiv</h2>
+    <ul style="margin: 0; padding-left: 20px; font-size: 15px;">
+      <li>Tendință generală: <strong>Sentiment preponderent pozitiv...</strong></li>
+      <li>Teme dominante: <strong>performanță, ecosistem, prețuri ridicate</strong></li>
+      <li>Oportunitate principală: <strong>comunicarea valorii...</strong></li>
+    </ul>
+  </section>
+
+  <!-- CARDURI -->
+  <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-bottom: 32px;">
+
+    <div style="background-color: white; border-left: 6px solid #FF8A00; border-radius: 12px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+      <h3 style="color: #FF8A00;">🤖 Sentiment general</h3>
+      <p style="font-size: 14px;">Utilizatorii apreciază consistența produselor Apple...</p>
+    </div>
+
+    <div style="background-color: white; border-left: 6px solid #FFC300; border-radius: 12px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+      <h3 style="color: #FFC300;">💬 Top 3 teme recurente</h3>
+      <p style="font-size: 14px;">1. Performanța...<br>2. Ecosistemul...<br>3. Prețurile...</p>
+    </div>
+
+    <div style="background-color: white; border-left: 6px solid #007BFF; border-radius: 12px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+      <h3 style="color: #007BFF;">⚠️ Riscuri reputaționale</h3>
+      <p style="font-size: 14px;">Discuțiile negative se concentrează pe prețuri...</p>
+    </div>
+
+    <div style="background-color: white; border-left: 6px solid #FF8A00; border-radius: 12px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.1);">
+      <h3 style="color: #FF8A00;">📈 Recomandări pentru marketing</h3>
+      <p style="font-size: 14px;">Accent pe valoarea pe termen lung...</p>
+    </div>
+
+  </section>
+
+  <!-- NARATIV -->
+  <section style="background-color: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); margin-bottom: 32px;">
+    <h2 style="color: #007BFF;">🧠 Interpretare narativă generată de AI</h2>
+    <p style="font-size: 15px; line-height: 1.6;">
+      Analiza comentariilor Reddit arată că Apple continuă să fie percepută ca un brand premium...
+    </p>
+  </section>
+
+</div>

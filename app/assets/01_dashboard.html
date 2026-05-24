@@ -1,0 +1,257 @@
+
+
+<style>
+  :root {
+    --primary: #FF8A00;
+    --secondary: #FFC300;
+    --accent: #007BFF;
+    --neutral: #F5F5F5;
+    --text: #1A1A1A;
+  }
+
+  body {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;
+    background-color: var(--neutral);
+    color: var(--text);
+  }
+
+  .page {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 24px;
+    padding: 24px;
+  }
+
+  .sidebar {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    height: fit-content;
+  }
+
+  .sidebar h2 {
+    font-size: 18px;
+    margin-bottom: 16px;
+    color: var(--primary);
+  }
+
+  .sidebar label {
+    font-weight: 600;
+    display: block;
+    margin-top: 16px;
+    margin-bottom: 6px;
+  }
+
+  .sidebar select,
+  .sidebar input[type="range"] {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background-color: #fff;
+  }
+
+  .main {
+    width: 100%;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background-color: #fff;
+    padding: 24px 32px;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    margin-bottom: 24px;
+  }
+
+  header img {
+    height: 48px;
+  }
+
+  header h1 {
+    margin: 0;
+    color: var(--primary);
+  }
+
+  header h3 {
+    margin: 4px 0 0;
+    color: var(--secondary);
+  }
+
+  .card {
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  }
+
+  .card h2 {
+    margin-top: 0;
+    color: var(--accent);
+  }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .kpi {
+    background-color: #F9FAFB;
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .kpi-label {
+    font-size: 13px;
+    color: #555;
+  }
+
+  .kpi-value {
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+  }
+
+  th {
+    background-color: var(--accent);
+    color: white;
+  }
+
+  .chart-placeholder {
+    height: 140px;
+    background: linear-gradient(90deg, #FF8A00, #FFC300, #007BFF);
+    opacity: 0.25;
+    border-radius: 8px;
+    margin-top: 12px;
+  }
+</style>
+
+<div class="page">
+
+  <div class="sidebar">
+    <h2>Dashboard Controls</h2>
+
+    <label>Sentiment analysis method</label>
+    <select>
+      <option>Logistic Regression 3-class balanced</option>
+      <option>VADER</option>
+      <option>Deep Learning Transformer</option>
+    </select>
+
+    <label>Rows in disagreement table</label>
+    <input type="range" min="10" max="500" value="100">
+
+    <label>Company</label>
+    <select>
+      <option>All</option>
+      <option>Apple</option>
+      <option>Google</option>
+      <option>Samsung</option>
+    </select>
+  </div>
+
+  <div class="main">
+
+    <header>
+      <img src="assets/logo.png">
+      <div>
+        <h1>Reputation & Sentiment Dashboard</h1>
+        <h3>Analiză reputațională pentru companii tehnologice</h3>
+      </div>
+    </header>
+
+    <!-- WHAT DOES THIS APP DO -->
+    <div class="card">
+      <h2>What does this app do?</h2>
+      <p>This application analyzes public Reddit discussions...</p>
+      <ul>
+        <li>Logistic Regression</li>
+        <li>VADER</li>
+        <li>Transformer</li>
+      </ul>
+    </div>
+
+    <!-- SELECTED METHOD -->
+    <div class="card">
+      <h2>Method: Logistic Regression 3-class balanced</h2>
+    </div>
+
+    <!-- OVERVIEW OF COLLECTED DATA -->
+    <div class="card">
+      <h2>Overview of collected data</h2>
+
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi-label">Total mentions</div><div class="kpi-value">19.801</div></div>
+        <div class="kpi"><div class="kpi-label">Model confidence</div><div class="kpi-value">0.6046</div></div>
+        <div class="kpi"><div class="kpi-label">% Negative</div><div class="kpi-value">47.48%</div></div>
+      </div>
+    </div>
+
+    <!-- SENTIMENT DISTRIBUTION -->
+    <div class="card">
+      <h2>Sentiment distribution by method</h2>
+
+      <table>
+        <tr><th>Method</th><th>Positive</th><th>Neutral</th><th>Negative</th><th>Total</th></tr>
+        <tr><td>Transformer</td><td>5017</td><td>13151</td><td>9181</td><td>27349</td></tr>
+        <tr><td>LogReg</td><td>3392</td><td>9954</td><td>14003</td><td>27349</td></tr>
+        <tr><td>VADER</td><td>14775</td><td>5624</td><td>6949</td><td>27348</td></tr>
+      </table>
+
+      <div class="chart-placeholder"></div>
+    </div>
+
+    <!-- SENTIMENT BREAKDOWN -->
+    <div class="card">
+      <h2>Sentiment breakdown</h2>
+
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi-label">Positive</div><div class="kpi-value">2.619</div></div>
+        <div class="kpi"><div class="kpi-label">Negative</div><div class="kpi-value">9.402</div></div>
+        <div class="kpi"><div class="kpi-label">Neutral</div><div class="kpi-value">7.780</div></div>
+      </div>
+    </div>
+
+    <!-- COMPANY SUMMARY -->
+    <div class="card">
+      <h2>Company summary</h2>
+
+      <h3>Mentions by company</h3>
+      <div class="chart-placeholder"></div>
+
+      <h3>Negative sentiment by company</h3>
+      <div class="chart-placeholder"></div>
+    </div>
+
+    <!-- INTERPRETATION -->
+    <div class="card">
+      <h2>Interpretation</h2>
+      <p>Based on the selected filters...</p>
+    </div>
+
+    <!-- METHOD NOTE -->
+    <div class="card">
+      <h2>Method note</h2>
+      <p>This view uses a balanced 3-class Logistic Regression model...</p>
+    </div>
+
+  </div>
+</div>
