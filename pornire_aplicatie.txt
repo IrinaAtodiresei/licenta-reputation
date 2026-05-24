@@ -1,3 +1,0 @@
-ca sa porneasca doar cu python 1.10 doar din vens!!!!
-venv\Scripts\activate
-streamlit run app/streamlit_app.py
