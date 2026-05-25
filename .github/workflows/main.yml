@@ -1,0 +1,61 @@
+name: Streamlit Cloud CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # ----------------------------------------------------------
+    # 1. CHECKOUT CODE
+    # ----------------------------------------------------------
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    # ----------------------------------------------------------
+    # 2. SETUP PYTHON
+    # ----------------------------------------------------------
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+
+    # ----------------------------------------------------------
+    # 3. INSTALL TORCH CPU (IMPORTANT!)
+    # ----------------------------------------------------------
+    - name: Install Torch CPU
+      run: |
+        pip install --upgrade pip
+        pip install torch==2.2.0+cpu torchvision==0.17.0+cpu torchaudio==2.2.0+cpu --index-url https://download.pytorch.org/whl/cpu
+
+    # ----------------------------------------------------------
+    # 4. INSTALL PROJECT DEPENDENCIES
+    # ----------------------------------------------------------
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        python -m nltk.downloader vader_lexicon
+
+    # ----------------------------------------------------------
+    # 5. RUN BASIC TESTS
+    # ----------------------------------------------------------
+    - name: Test imports
+      run: |
+        python - <<EOF
+        import torch
+        import transformers
+        import vaderSentiment
+        import streamlit
+        print("All imports OK")
+        EOF
+
+    # ----------------------------------------------------------
+    # 6. SUCCESS
+    # ----------------------------------------------------------
+    - name: CI completed
+      run: echo "Streamlit Cloud CI passed successfully!"

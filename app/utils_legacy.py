@@ -78,7 +78,7 @@ def load_reddit_dataframe() -> pd.DataFrame:
     sql = """
         SELECT
             m.mention_id,
-            c.company_name AS company,
+            c.name AS company,
             m.subreddit,
             m.author,
             m.content AS text,
@@ -87,7 +87,7 @@ def load_reddit_dataframe() -> pd.DataFrame:
             m.post_id,
             m.reddit_url
         FROM reputation.mention m
-        LEFT JOIN reputation.company c
+        LEFT JOIN reputation.companies c
             ON m.company_id = c.company_id
         ORDER BY m.published_at DESC
     """

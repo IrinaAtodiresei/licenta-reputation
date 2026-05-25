@@ -4,9 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5e144aed-1f1e-4264-bf5c-2969611e1c6d" name="Changes" comment="">
+    <list default="true" id="5e144aed-1f1e-4264-bf5c-2969611e1c6d" name="Changes" comment="Added DistilBERT vs Logistic Regression comparison on labeled Reddit sample">
+      <change beforePath="$PROJECT_DIR$/.idea/LICENTA.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/LICENTA.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/dashboard.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/comenzi_instalare_rulare.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/pe_scurt.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/requirements_old.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/utils_legacy.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/utils_legacy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/structura.txt" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -21,7 +26,27 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;IrinaAtodiresei&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/IrinaAtodiresei/licenta-reputation.git&quot;,
+    &quot;accountId&quot;: &quot;663a1ec5-e806-409f-98c2-e2a6f3db4bd8&quot;
+  }
+}</component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5
@@ -36,21 +61,28 @@
   &quot;keyToString&quot;: {
     &quot;Python.connector_reddit.executor&quot;: &quot;Run&quot;,
     &quot;Python.dashboard.executor&quot;: &quot;Run&quot;,
+    &quot;Python.evaluate_model.executor&quot;: &quot;Run&quot;,
+    &quot;Python.prepare_data.executor&quot;: &quot;Run&quot;,
     &quot;Python.test_db.executor&quot;: &quot;Run&quot;,
     &quot;Python.test_model.executor&quot;: &quot;Run&quot;,
     &quot;Python.train_sentiment140.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;final&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Irina/Anul3/SEM2/LICENTA_MATERIALE/ReputationDashboard02&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;preferences.lookFeel&quot;
   }
 }</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Irina\Anul3\SEM2\LICENTA\models" />
+      <recent name="C:\Irina\Anul3\SEM2\LICENTA" />
+      <recent name="C:\Irina\Anul3\SEM2\LICENTA\archive_old" />
+      <recent name="C:\Irina\Anul3\SEM2\LICENTA\app" />
+      <recent name="C:\Irina\Anul3\SEM2\LICENTA\app\assets" />
+      <recent name="C:\Irina\Anul3\SEM2\LICENTA\archive_sent140" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.dashboard">
+  <component name="RunManager" selected="Python.prepare_data">
     <configuration name="connector_reddit" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="LICENTA" />
       <option name="ENV_FILES" value="" />
@@ -95,7 +127,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="test_db" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="evaluate_model" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="LICENTA" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -104,11 +136,33 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/app" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/scripts" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/app/test_db.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/evaluate_model.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="prepare_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="LICENTA" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/scripts" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/prepare_data.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -139,35 +193,13 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="train_sentiment140" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="LICENTA" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/data" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/data/train_sentiment140.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.prepare_data" />
+        <item itemvalue="Python.evaluate_model" />
         <item itemvalue="Python.dashboard" />
         <item itemvalue="Python.connector_reddit" />
         <item itemvalue="Python.test_model" />
-        <item itemvalue="Python.train_sentiment140" />
-        <item itemvalue="Python.test_db" />
       </list>
     </recent_temporary>
   </component>
@@ -187,7 +219,99 @@
       <option name="presentableId" value="Default" />
       <updated>1771878683933</updated>
     </task>
+    <task id="LOCAL-00001" summary="Add model evaluation and confusion matrix to Streamlit dashboard">
+      <option name="closed" value="true" />
+      <created>1773268364027</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1773268364027</updated>
+    </task>
+    <task id="LOCAL-00002" summary="Fix requirements for Streamlit Cloud">
+      <option name="closed" value="true" />
+      <created>1773268740025</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1773268740025</updated>
+    </task>
+    <task id="LOCAL-00003" summary="Fix requirements for Streamlit Cloud">
+      <option name="closed" value="true" />
+      <created>1773268866426</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1773268866426</updated>
+    </task>
+    <task id="LOCAL-00004" summary="Show confusion matrix only for Logistic Regression">
+      <option name="closed" value="true" />
+      <created>1773309247573</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1773309247573</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Show confusion matrix only for Logistic Regression">
+      <option name="closed" value="true" />
+      <created>1773309460484</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1773309460484</updated>
+    </task>
+    <task id="LOCAL-00006" summary="Show confusion matrix only for Logistic Regression">
+      <option name="closed" value="true" />
+      <created>1774192960960</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1774192960960</updated>
+    </task>
+    <task id="LOCAL-00007" summary="Show confusion matrix only for Logistic Regression">
+      <option name="closed" value="true" />
+      <created>1774195384291</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1774195384291</updated>
+    </task>
+    <task id="LOCAL-00008" summary="Add tuned model evaluation files">
+      <option name="closed" value="true" />
+      <created>1774195860569</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1774195860569</updated>
+    </task>
+    <task id="LOCAL-00009" summary="Nr4">
+      <option name="closed" value="true" />
+      <created>1774213439815</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1774213439815</updated>
+    </task>
+    <task id="LOCAL-00010" summary="Added DistilBERT vs Logistic Regression comparison on labeled Reddit sample">
+      <option name="closed" value="true" />
+      <created>1774256240521</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1774256240521</updated>
+    </task>
+    <task id="LOCAL-00011" summary="Added DistilBERT vs Logistic Regression comparison on labeled Reddit sample">
+      <option name="closed" value="true" />
+      <created>1774690354878</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1774690354878</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
+  </component>
+  <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName="*.csv" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
@@ -199,5 +323,14 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Add model evaluation and confusion matrix to Streamlit dashboard" />
+    <MESSAGE value="Fix requirements for Streamlit Cloud" />
+    <MESSAGE value="Show confusion matrix only for Logistic Regression" />
+    <MESSAGE value="Add tuned model evaluation files" />
+    <MESSAGE value="Nr4" />
+    <MESSAGE value="Added DistilBERT vs Logistic Regression comparison on labeled Reddit sample" />
+    <option name="LAST_COMMIT_MESSAGE" value="Added DistilBERT vs Logistic Regression comparison on labeled Reddit sample" />
   </component>
 </project>
