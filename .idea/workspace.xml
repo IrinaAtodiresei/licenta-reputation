@@ -5,13 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5e144aed-1f1e-4264-bf5c-2969611e1c6d" name="Changes" comment="Added DistilBERT vs Logistic Regression comparison on labeled Reddit sample">
-      <change beforePath="$PROJECT_DIR$/.idea/LICENTA.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/LICENTA.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/comenzi_instalare_rulare.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/pe_scurt.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/requirements_old.txt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/utils_legacy.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/utils_legacy.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/structura.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/tabs/tab5_proof_of_source.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tabs/tab5_proof_of_source.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -139,7 +139,7 @@ def render_tab5(base_df: pd.DataFrame, rows_slider: int):
     # SCROLLABLE TABLE
     # ============================
     html_table = page_df[
-        ["company", "subreddit", "author", "text", "created_utc"]
+        ["company", "author", "text", "created_utc"]
     ].to_html(escape=False, index=True)
 
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
