@@ -311,11 +311,20 @@ def render_tab2(summary_df=None, negative_df=None):
         unsafe_allow_html=True,
     )
     # ---------- ATENȚIONARE DESPRE LIMITA DE 30 ----------
-    st.info(
-        "ℹ️ *Sunt afișate doar ultimele 30 de mențiuni negative (limită configurată pentru performanță). "
-        "Limitarea previne consumul excesiv de tokeni și menține viteza de generare a insight‑urilor. "
-        "Numărul real de mențiuni din perioada selectată poate fi mai mare în baza de date.*"
+    limit_message = (
+        "ℹ️ *Only the latest 30 negative mentions are displayed "
+        "(performance limit). This limitation prevents excessive token consumption "
+        "and keeps insight generation fast. The actual number of mentions in the "
+        "selected period may be higher in the database.*"
+        if lang == "EN"
+        else
+        "ℹ️ *Sunt afișate doar ultimele 30 de mențiuni negative "
+        "(limită configurată pentru performanță). Limitarea previne consumul excesiv "
+        "de tokeni și menține viteza de generare a insight-urilor. Numărul real de "
+        "mențiuni din perioada selectată poate fi mai mare în baza de date.*"
     )
+
+    st.info(limit_message)
 
     # ---------- CARDURI ----------
     with cards_placeholder.container():
