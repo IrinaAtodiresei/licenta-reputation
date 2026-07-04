@@ -32,9 +32,7 @@ from utils.paths import (
     MANUAL_REPORT_PATH,
 )
 
-# ------------------------------------------------------------
 # Helper functions
-# ------------------------------------------------------------
 
 def plot_confusion_matrix_heatmap(cm_df, title="Confusion Matrix"):
     fig, ax = plt.subplots(figsize=(8, 6))

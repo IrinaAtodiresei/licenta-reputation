@@ -81,7 +81,7 @@ def render_pct_negative_chart(summary: pd.DataFrame):
 def render_avg_score_chart(summary: pd.DataFrame):
     """Render average score by company."""
     st.markdown('<div class="rd-card">', unsafe_allow_html=True)
-    st.markdown('<h3 style="margin-top: 0;">📈 Average confidence score by company</h3>', unsafe_allow_html=True)
+    st.markdown('<h3 style="margin-top: 0;">📈 Average sentiment score by company</h3>', unsafe_allow_html=True)
     
     if not summary.empty and "company_name" in summary.columns and "avg_score" in summary.columns:
         score_chart = summary[["company_name", "avg_score"]].sort_values("avg_score", ascending=False)

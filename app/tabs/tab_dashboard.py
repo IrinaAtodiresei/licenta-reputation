@@ -57,9 +57,8 @@ button[data-testid="stBaseButton-secondary"]:hover {
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================================
-#  HEATMAP HELPERS
-# ============================================================
+
+#HEATMAP HELPERS
 
 def plot_confusion_matrix_heatmap(cm_df, title="Confusion Matrix"):
     fig, ax = plt.subplots(figsize=(8, 6))
@@ -80,21 +79,20 @@ def plot_normalized_confusion_matrix(cm_df, title="Normalized Confusion Matrix")
     ax.set_xlabel("Predicted")
     ax.set_ylabel("Actual")
     return fig
-# ============================================================
-#  LOADERS — Logistic Regression evaluation files
-# ============================================================
-# Aceste funcții încarcă metricele LR, matricea de confuzie și raportul.
-# Dacă fișierele lipsesc, returnează DataFrame-uri goale pentru a evita crash-uri.
+
+#LOADERS-Logistic Regression evaluation files
+#Aceste functii incarca metricele LR, matricea de confuzie, raportul
+#Daca fisierele lipsesc returneaza DataFrame uri goale pt a evita crash uri
 
 def load_lr_evaluation():
-    # Încarcă metricele LR din JSON
+    #Incarcă metricele LR din JSON
     try:
         with open(LR_METRICS_PATH, "r", encoding="utf-8") as f:
             metrics = json.load(f)
     except Exception:
         metrics = {}
 
-    # Încarcă matricea de confuzie LR
+    #Incarcă matricea de confuzie LR
     try:
         cm_raw = pd.read_csv(LR_CM_PATH, index_col=0)
     except Exception:

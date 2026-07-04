@@ -6,7 +6,16 @@
   <component name="ChangeListManager">
     <list default="true" id="5e144aed-1f1e-4264-bf5c-2969611e1c6d" name="Changes" comment="Added DistilBERT vs Logistic Regression comparison on labeled Reddit sample">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/assets/styles.css" beforeDir="false" afterPath="$PROJECT_DIR$/app/assets/styles.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/reddit_pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/reddit_pipeline.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/sentiment_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/sentiment_models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/tabs/tab1_dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tabs/tab1_dashboard.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/tabs/tab2_ai_insights.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tabs/tab2_ai_insights.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/tabs/tab3_interactive_demo.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tabs/tab3_interactive_demo.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/tabs/tab4_live_pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tabs/tab4_live_pipeline.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/tabs/tab5_proof_of_source.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tabs/tab5_proof_of_source.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/tabs/tab_dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tabs/tab_dashboard.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/utils/charts.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/utils/charts.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

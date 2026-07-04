@@ -20,9 +20,7 @@ STATUS_COLORS = {
     "Error": "#DC2626",
 }
 
-# ============================================================
-# CACHE FUNCTIONS
-# ============================================================
+#CACHE FUNCTIONS
 
 @st.cache_data(show_spinner=False)
 def cached_logreg_label(text: str) -> str:
@@ -37,9 +35,8 @@ def cached_transformer_label(text: str) -> str:
     return predict_transformer(text)["label"]
 
 
-# ============================================================
-# TIME AGO — versiunea robustă
-# ============================================================
+
+#TIME AGO—versiunea robusta
 
 def time_ago(ts):
     try:
@@ -63,9 +60,7 @@ def time_ago(ts):
     return f"acum {int(sec // 86400)} zile"
 
 
-# ============================================================
-# UI HELPERS
-# ============================================================
+#UI HELPERS
 
 def render_step_card(title: str, description: str, status: str) -> str:
     color = STATUS_COLORS.get(status, "#9CA3AF")

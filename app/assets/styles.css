@@ -19,6 +19,46 @@ div[data-testid="stAppViewContainer"] {
 header [data-testid="stHeader"] {
     display: none !important;
 }
+html, body, [data-testid="stAppViewContainer"], .stApp {
+    background-color: #F5F5F5 !important;
+    color: #111827 !important;
+    color-scheme: light !important;
+}
+
+[data-testid="stSidebar"] {
+    background-color: #F5F5F5 !important;
+}
+
+[data-testid="stSidebar"] * {
+    color: #111827 !important;
+}
+
+.app-card,
+.card,
+.insight-card,
+.feature-card,
+section,
+div[data-testid="stVerticalBlock"] {
+    color: #111827;
+}
+
+.app-card p,
+.card p,
+.insight-card__body,
+.feature-card p,
+.section-desc,
+.app-section-text {
+    color: #475569 !important;
+}
+
+.app-card h1,
+.app-card h2,
+.app-card h3,
+.card h1,
+.card h2,
+.card h3 {
+    color: #0B72E5 !important;
+}
 
 /* ============================================================
    SIDEBAR (VISIBLE BY DEFAULT)
@@ -273,6 +313,7 @@ section[data-testid="stSidebar"] {
     height: auto !important;
     min-height: 100vh !important;
 }
+}
 
 button[data-testid="stBaseButton-togglebtn"] {
     display: none !important;
@@ -280,7 +321,7 @@ button[data-testid="stBaseButton-togglebtn"] {
 
 button[data-testid="stBaseButton-secondary"],
 button[data-testid="baseButton-secondary"] {
-   # display: none !important;
+   /* display: none !important;*/
 }
 
 /* ============================================================
@@ -356,4 +397,27 @@ button[kind="primary"] {
 
 .st-key-help_btn_sidebar button {
     width: 100% !important;
+}
+/* FIX DARK MODE — HOME FEATURE CARDS */
+.feature-card,
+.feature-card * {
+    color: #111827 !important;
+}
+
+.feature-card p {
+    color: #475569 !important;
+}
+
+.feature-card h3 {
+    font-weight: 700 !important;
+}
+
+/* FIX DARK MODE — FOOTER */
+footer,
+footer * {
+    color: #111827 !important;
+}
+
+footer a {
+    color: #0B72E5 !important;
 }

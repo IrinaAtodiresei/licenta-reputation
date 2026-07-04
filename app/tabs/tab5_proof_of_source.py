@@ -41,9 +41,7 @@ def render_tab5(base_df: pd.DataFrame, rows_slider: int):
     </style>
     """, unsafe_allow_html=True)
 
-    # ============================
-    # INTRO CARD
-    # ============================
+    #INTRO CARD
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(
         f'<h2 class="section-title">{t("tab5_title", lang)}</h2>',
@@ -52,11 +50,9 @@ def render_tab5(base_df: pd.DataFrame, rows_slider: int):
     st.write(t("tab5_description", lang))
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ============================
-    # ROWS PER PAGE — INDEPENDENT DE SIDEBAR
-    # ============================
+    #ROWS PER PAGE-INDEPENDENT DE SIDEBAR
     if "tab5_rows_per_page" not in st.session_state:
-        st.session_state.tab5_rows_per_page = 10  # default REAL, nu 50
+        st.session_state.tab5_rows_per_page = 10  #default REAL, nu 50
 
     rows_per_page = st.slider(
         t("tab5_rows_per_page", lang),
@@ -66,9 +62,7 @@ def render_tab5(base_df: pd.DataFrame, rows_slider: int):
         key="tab5_rows_per_page"
     )
 
-    # ============================
-    # PAGINATION STATE
-    # ============================
+    #PAGINATION STATE
     if "proof_page" not in st.session_state:
         st.session_state.proof_page = 0
 
@@ -76,9 +70,8 @@ def render_tab5(base_df: pd.DataFrame, rows_slider: int):
     page_size = rows_per_page
     total_pages = max(1, (total_rows - 1) // page_size + 1)
 
-    # ============================
-    # PAGINATION BUTTONS
-    # ============================
+
+    #PAGINATION BUTTONS
     col_prev, col_page, col_next = st.columns([1, 2, 1])
 
     with col_prev:
@@ -139,7 +132,7 @@ def render_tab5(base_df: pd.DataFrame, rows_slider: int):
     # SCROLLABLE TABLE
     # ============================
     html_table = page_df[
-        ["company", "author", "text", "created_utc"]
+        ["company", "subreddit", "author", "text", "created_utc"]
     ].to_html(escape=False, index=True)
 
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)

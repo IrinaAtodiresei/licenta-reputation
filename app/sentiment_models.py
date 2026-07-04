@@ -97,9 +97,8 @@ def predict_vader(text):
     }
 
 
-# ============================================================
-# TRANSFORMER MOCK (compatibil cu UI-ul existent)
-# ============================================================
+
+# TRANSFORMER MOCK (compatibil cu UI existent)
 
 @st.cache_data(show_spinner=False)
 def predict_transformer(text: str) -> Dict:
@@ -121,9 +120,7 @@ def predict_transformer(text: str) -> Dict:
     }
 
 
-# ============================================================
 # PUBLIC API
-# ============================================================
 @st.cache_data(show_spinner=False)
 def predict_logreg(text: str) -> Dict:
     return logreg_model.predict(text)

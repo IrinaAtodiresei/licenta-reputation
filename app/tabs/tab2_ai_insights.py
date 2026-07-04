@@ -178,29 +178,25 @@ def render_tab2(summary_df=None, negative_df=None):
 
     insights = st.session_state.get("ai_insights")
 
-    # ============================================================
-    #  GENERARE DOAR LA SUBMIT
-    # ============================================================
+    # GENERARE DOAR LA SUBMIT
     if submitted:
 
         with st.spinner(t("ai_insights_generating_spinner", lang)):
 
-            # ---------- VARIANTA 2 — LOGICA AUTOMATĂ PENTRU MODEL ----------
+            #VARIANTA 2-LOGICA AUTOMATĂ PENTRU MODEL
             if bullet_mode:
                 model = "llama-3.1-8b-instant"
 
-            # ---------- ÎNCĂRCARE DATE ----------
+            # INCARCARE DATE
             summary_df = load_summary(METHODS[sentiment_method])
             negative_df = load_negative_examples(METHODS[sentiment_method], company)
 
-            # ------------------------------------------------------------
-            # CALCUL PERIOADĂ RAPORTATĂ LA ULTIMA DATĂ DIN negative_df
-            # ------------------------------------------------------------
+            #CALCUL PERIOADA RAPORTATA LA ULTIMA DATA DIN negative_df
 
-            # Convertim la datetime
+            #Convertim la datetime
             negative_df["published_at"] = pd.to_datetime(negative_df["published_at"], errors="coerce")
 
-            # 1. Ultima dată disponibilă în negative_df (date brute)
+            #1.Ultima data disponibila in negative_df (date brute)
             last_date = negative_df["published_at"].max()
 
             days_map = {
@@ -290,13 +286,13 @@ def render_tab2(summary_df=None, negative_df=None):
 
             st.session_state["ai_insights"] = insights
 
-    # ---------- NO INSIGHTS ----------
+    #NO INSIGHTS
     insights = st.session_state.get("ai_insights")
     if not insights:
         summary_placeholder.info(t("ai_insights_no_insights_message", lang))
         return
 
-    # ---------- METADATA ----------
+    #METADATA
     summary_placeholder.markdown(
         f"""
         <div style="font-size: 12px; color: #64748B; margin-bottom: 12px;">
@@ -310,7 +306,7 @@ def render_tab2(summary_df=None, negative_df=None):
         """,
         unsafe_allow_html=True,
     )
-    # ---------- ATENȚIONARE DESPRE LIMITA DE 30 ----------
+    #ATENȚIONARE LIMITA DE 30
     limit_message = (
         "ℹ️ *Only the latest 30 negative mentions are displayed "
         "(performance limit). This limitation prevents excessive token consumption "

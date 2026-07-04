@@ -195,9 +195,9 @@ def extract_fields(df: pd.DataFrame, max_rows: int = None) -> pd.DataFrame:
     existing = [c for c in cols if c in df.columns]
     return limit_df(df[existing].copy(), max_rows)
 
-# ============================================================
-# MAP TO COMPANY
-# ============================================================
+
+#MAP TO COMPANY
+
 def map_to_company(df: pd.DataFrame, max_rows: int = None) -> pd.DataFrame:
     def _map(row):
         sub = str(row.get("subreddit", "")).lower()
@@ -216,9 +216,8 @@ def map_to_company(df: pd.DataFrame, max_rows: int = None) -> pd.DataFrame:
     df = df[df["company"].isin(["Apple", "Google", "Samsung"])]
     return limit_df(df, max_rows)
 
-# ============================================================
-# PIPELINE COMPLET
-# ============================================================
+#PIPELINE COMPLET
+
 def run_reddit_pipeline_live(limit_per_sub: int = 20) -> pd.DataFrame:
     subreddits = ["apple", "google", "samsung"]
 

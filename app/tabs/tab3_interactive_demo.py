@@ -39,9 +39,7 @@ def cached_word_contrib(text):
 def render_tab3():
     lang = st.session_state["lang"]
 
-    # ============================
-    #  INTRO CARD
-    # ============================
+    #INTRO CARD
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(
         f'<h2 class="section-title">{t("tab3_title", lang)}</h2>',
@@ -50,9 +48,7 @@ def render_tab3():
     st.write(t("tab3_intro_description", lang))
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # ============================
-    #  INPUT CARD
-    # ============================
+    # INPUT CARD
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown(
         f'<h2 class="section-title">{t("tab3_input_section", lang)}</h2>',
